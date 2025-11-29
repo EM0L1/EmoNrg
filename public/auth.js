@@ -1,3 +1,5 @@
+console.log("AUTH.JS YÜKLENİYOR..."); // Bu logu konsolda görmelisin
+
 // --- FIREBASE AUTH KONFIGURASYONU ---
 const firebaseConfig = {
   apiKey: "AIzaSyCN7_FvUFjWAjIFmdG7yO_nJUL0RJZmD_0",
@@ -324,6 +326,7 @@ function initAuth() {
     });
 }
 
+// DOM yüklendiğinde başlat
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAuth);
 } else {
