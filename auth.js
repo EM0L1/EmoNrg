@@ -1,4 +1,4 @@
-// --- FIREBASE KONFIGURASYONU ---
+// --- FIREBASE AUTH KONFIGURASYONU ---
 const firebaseConfig = {
   apiKey: "AIzaSyCN7_FvUFjWAjIFmdG7yO_nJUL0RJZmD_0",
   authDomain: "mini-golf-arena-493dc.firebaseapp.com",
@@ -6,32 +6,37 @@ const firebaseConfig = {
   storageBucket: "mini-golf-arena-493dc.firebasestorage.app",
   messagingSenderId: "1025857887392",
   appId: "1:1025857887392:web:5ad0a2428311f8a679bdc5",
-  measurementId: "G-1899GSVYY6",
-  databaseURL: "https://mini-golf-arena-493dc-default-rtdb.firebaseio.com" // Veritabanı URL'si önemli!
+  measurementId: "G-1899GSVYY6"
 };
 
-let app, auth, db;
+let app, auth;
+let socket; // Socket.io bağlantısı
 let currentUser = null;
 let currentRoomId = null;
-let roomListener = null;
 
 function initAuth() {
     console.log("DOM Hazır, initAuth çalışıyor...");
 
-    // Firebase'i Başlat (Compat Modu)
+    // 1. Firebase Auth Başlat
     try {
-        if (!firebase.apps.length) {
-            app = firebase.initializeApp(firebaseConfig);
-        } else {
-            app = firebase.app();
-        }
+        if (!firebase.apps.length) app = firebase.initializeApp(firebaseConfig);
+        else app = firebase.app();
         auth = firebase.auth();
-        db = firebase.database(); // Realtime Database
-        console.log("Firebase başarıyla başlatıldı.");
+        console.log("Firebase Auth başlatıldı.");
     } catch (e) {
-        console.error("Firebase başlatma hatası:", e);
-        alert("Firebase bağlantı hatası: " + e.message);
+        console.error("Firebase Hatası:", e);
         return;
+    }
+
+    // 2. Socket.io Bağlantısı
+    try {
+        socket = io();
+        console.log("Socket.io bağlantısı kuruldu.");
+        
+        // Socket Event Dinleyicileri
+        setupSocketListeners();
+    } catch (e) {
+        console.error("Socket.io Hatası:", e);
     }
 
     // --- DOM ELEMENTLERİ ---
@@ -50,7 +55,7 @@ function initAuth() {
     const btnToggleMode = document.getElementById('btn-toggle-mode');
     const authError = document.getElementById('auth-error');
 
-    // Lobi Menü Butonları
+    // Lobi Menü
     const btnShowCreate = document.getElementById('btn-show-create');
     const btnShowJoin = document.getElementById('btn-show-join');
     const btnJoinRandom = document.getElementById('btn-join-random');
@@ -58,7 +63,7 @@ function initAuth() {
     const btnSingleplayer = document.getElementById('btn-singleplayer');
     const btnSettings = document.getElementById('btn-settings');
 
-    // Modal Butonları
+    // Modal
     const btnCreateConfirm = document.getElementById('btn-create-confirm');
     const btnCreateCancel = document.getElementById('btn-create-cancel');
     const btnJoinConfirm = document.getElementById('btn-join-confirm');
@@ -67,7 +72,7 @@ function initAuth() {
     const joinError = document.getElementById('join-error');
     const roomPublicSwitch = document.getElementById('room-public-switch');
 
-    // Oda İçi Elemanları
+    // Oda İçi
     const displayRoomCode = document.getElementById('display-room-code');
     const roomPlayerList = document.getElementById('room-player-list');
     const playerCountSpan = document.getElementById('player-count');
@@ -77,27 +82,16 @@ function initAuth() {
 
     let isRegisterMode = false; 
 
-    // --- EKRAN YÖNETİMİ ---
     function showScreen(screenName) {
         Object.values(screens).forEach(el => el.classList.add('hidden'));
-        if(screens[screenName]) screens[screenName].classList.remove('hidden');
+        if(screenName && screens[screenName]) screens[screenName].classList.remove('hidden');
     }
 
-    // --- YARDIMCI FONKSİYONLAR ---
     function createFakeEmail(nickname) {
         const cleanNick = nickname.trim().replace(/\s+/g, '').toLowerCase()
             .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
             .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c');
         return `${cleanNick}@emonrg.game`;
-    }
-
-    function generateRoomId() {
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Karışıklık önlemek için I, O, 0, 1 çıkardım
-        let result = "";
-        for(let i=0; i<6; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
     }
 
     // --- AUTH İŞLEMLERİ ---
@@ -135,165 +129,92 @@ function initAuth() {
         btnToggleMode.textContent = isRegisterMode ? "Zaten hesabın var mı? Giriş Yap" : "Hesabın yok mu? Kayıt Ol";
     }
 
-    // --- ODA YÖNETİMİ ---
+    // --- SOCKET.IO EVENTLERİ ---
+    function setupSocketListeners() {
+        // Oda oluşturulduğunda
+        socket.on('roomCreated', ({ roomId, room }) => {
+            console.log("Oda oluşturuldu:", roomId);
+            enterRoom(roomId, room);
+        });
 
-    // 1. ODA OLUŞTURMA
-    async function createRoom() {
-        if (!currentUser) return;
-        
-        const roomId = generateRoomId();
-        const isPublic = roomPublicSwitch.checked;
-
-        const roomData = {
-            id: roomId,
-            host: currentUser.uid,
-            isPublic: isPublic,
-            status: 'waiting',
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            players: {
-                [currentUser.uid]: {
-                    name: currentUser.displayName,
-                    score: 0,
-                    ready: true
-                }
-            }
-        };
-
-        try {
-            // Veritabanına yaz
-            await db.ref('rooms/' + roomId).set(roomData);
-            enterRoom(roomId);
-        } catch (error) {
-            console.error("Oda oluşturulamadı:", error);
-            alert("Oda oluşturulurken hata oluştu.");
-        }
-    }
-
-    // 2. ODAYA KATILMA (KOD İLE)
-    async function joinRoom(roomId) {
-        if (!currentUser) return;
-        roomId = roomId.toUpperCase();
-
-        const roomRef = db.ref('rooms/' + roomId);
-        
-        try {
-            const snapshot = await roomRef.get();
-            if (!snapshot.exists()) {
-                throw new Error("Böyle bir oda bulunamadı.");
-            }
-
-            const room = snapshot.val();
-            if (room.status !== 'waiting') {
-                throw new Error("Bu oda şu an oyunda.");
-            }
-
-            const playerCount = Object.keys(room.players || {}).length;
-            if (playerCount >= 6) {
-                throw new Error("Oda dolu (Max 6 kişi).");
-            }
-
-            // Odaya kendini ekle
-            await roomRef.child('players/' + currentUser.uid).set({
-                name: currentUser.displayName,
-                score: 0,
-                ready: false
-            });
-
-            enterRoom(roomId);
-
-        } catch (error) {
-            joinError.textContent = error.message;
-            joinError.classList.remove('hidden');
-        }
-    }
-
-    // 3. RASTGELE ODAYA KATILMA
-    async function joinRandom() {
-        try {
-            // Sadece 'waiting' durumundaki ve 'isPublic' olan odaları getir
-            // Firebase query sınırlı olduğu için istemci tarafında filtreleyeceğiz
-            // Gerçek projede cloud function veya daha iyi bir indexleme gerekir
-            const snapshot = await db.ref('rooms')
-                .orderByChild('status').equalTo('waiting')
-                .limitToFirst(20) // İlk 20 odayı getir
-                .get();
-
-            if (!snapshot.exists()) {
-                alert("Şu an uygun oda yok. Kendiniz bir oda kurabilirsiniz!");
-                showScreen('createRoom');
-                return;
-            }
-
-            const rooms = snapshot.val();
-            // Uygun odayı bul (Public olan ve dolu olmayan)
-            const availableRoom = Object.values(rooms).find(r => 
-                r.isPublic === true && Object.keys(r.players || {}).length < 6
-            );
-
-            if (availableRoom) {
-                joinRoom(availableRoom.id);
-            } else {
-                alert("Uygun oda bulunamadı.");
-            }
-
-        } catch (error) {
-            console.error(error);
-            alert("Hata: " + error.message);
-        }
-    }
-
-    // 4. ODA İÇİ DİNLEME VE ARAYÜZ GÜNCELLEME
-    function enterRoom(roomId) {
-        currentRoomId = roomId;
-        showScreen('roomLobby');
-        displayRoomCode.textContent = roomId;
-        
-        // Oda değişikliklerini dinle
-        const roomRef = db.ref('rooms/' + roomId);
-        
-        roomListener = roomRef.on('value', (snapshot) => {
-            const room = snapshot.val();
-            
-            if (!room) {
-                // Oda silinmiş veya kurucu kapatmış
-                leaveRoom(true);
-                return;
-            }
-
+        // Oda güncellendiğinde (Biri girdi/çıktı)
+        socket.on('roomUpdated', (room) => {
             updateRoomUI(room);
+        });
+
+        // Hata mesajları
+        socket.on('error', (msg) => {
+            alert(msg);
+        });
+
+        // Oyun Başladı
+        socket.on('gameStarted', () => {
+            console.log("Oyun başlıyor!");
+            showScreen(null); // Lobi ekranlarını kapat
+            document.getElementById('game').classList.remove('hidden');
+            // Multiplayer modunda başlat
+            if (window.startGameSingle) window.startGameSingle(currentUser.displayName);
         });
     }
 
-    function leaveRoom(forced = false) {
-        if (currentRoomId) {
-            // Listener'ı kaldır
-            db.ref('rooms/' + currentRoomId).off('value', roomListener);
-            
-            // Eğer kendi isteğimizle çıkıyorsak veritabanından silelim
-            if (!forced && currentUser) {
-                db.ref(`rooms/${currentRoomId}/players/${currentUser.uid}`).remove();
-            }
+    // --- ODA YÖNETİMİ ---
 
-            currentRoomId = null;
-        }
+    function createRoom() {
+        if (!currentUser) return;
+        const isPublic = roomPublicSwitch ? roomPublicSwitch.checked : true;
         
-        if (forced) alert("Oda kapatıldı.");
+        socket.emit('createRoom', {
+            uid: currentUser.uid,
+            name: currentUser.displayName,
+            isPublic: isPublic
+        });
+    }
+
+    function joinRoom(code) {
+        if (!currentUser) return;
+        socket.emit('joinRoom', {
+            roomId: code.toUpperCase(),
+            uid: currentUser.uid,
+            name: currentUser.displayName
+        });
+    }
+
+    function joinRandom() {
+        if (!currentUser) return;
+        socket.emit('joinRandom', {
+            uid: currentUser.uid,
+            name: currentUser.displayName
+        });
+    }
+
+    function enterRoom(roomId, room) {
+        currentRoomId = roomId;
+        showScreen('roomLobby');
+        displayRoomCode.textContent = roomId;
+        updateRoomUI(room);
+    }
+
+    function leaveRoom() {
+        socket.emit('leaveRoom');
+        currentRoomId = null;
         showScreen('lobbyMenu');
     }
 
     function updateRoomUI(room) {
+        if(!room || !room.players) return;
+
         roomPlayerList.innerHTML = '';
-        const players = Object.values(room.players || {});
+        const players = Object.values(room.players);
         playerCountSpan.textContent = players.length;
 
-        // Listeyi Doldur
+        // Oyuncu Listesi
         players.forEach(p => {
             const li = document.createElement('li');
             li.innerHTML = `<span class="avatar">👤</span> ${p.name}`;
             roomPlayerList.appendChild(li);
         });
 
-        // Boş slotları göster (Toplam 6 slot)
+        // Boş Slotlar
         for(let i=players.length; i<6; i++) {
             const li = document.createElement('li');
             li.className = 'empty';
@@ -301,12 +222,13 @@ function initAuth() {
             roomPlayerList.appendChild(li);
         }
 
-        // Başlat Butonu Kontrolü (Sadece Host görebilir, En az 4 kişi)
-        const isHost = (room.host === currentUser.uid);
+        // Başlat Butonu (Sadece Host ve socket.id eşleşiyorsa)
+        // Not: Server'dan gelen room.host bir socket.id'dir.
+        const isHost = (room.host === socket.id);
         
         if (isHost) {
             btnStartGame.style.display = 'block';
-            if (players.length >= 4) { // GEREKSİNİM: En az 4 kişi
+            if (players.length >= 4) {
                 btnStartGame.disabled = false;
                 btnStartGame.textContent = "Oyunu Başlat";
                 roomStatusMsg.textContent = "Oyun başlatılabilir!";
@@ -322,27 +244,20 @@ function initAuth() {
     }
 
     // --- EVENT LISTENERS ---
-    
-    // Auth
     btnAction.addEventListener('click', handleAuth);
     btnToggleMode.addEventListener('click', toggleAuthMode);
     btnLogout.addEventListener('click', () => auth.signOut());
-    
-    // Menü Navigasyon
+
     if(btnSingleplayer) {
         btnSingleplayer.addEventListener('click', () => {
-            showScreen(null); // Tüm overlayleri kapat
+            showScreen(null);
             document.getElementById('game').classList.remove('hidden');
-            // script.js'deki oyunu başlat (Global fonksiyona ihtiyaç duyabiliriz)
             if (window.startGameSingle) window.startGameSingle(currentUser.displayName);
-            else console.warn("startGameSingle fonksiyonu bulunamadı!");
         });
     }
 
     if(btnSettings) {
-        btnSettings.addEventListener('click', () => {
-            alert("Ayarlar menüsü yapım aşamasında.");
-        });
+        btnSettings.addEventListener('click', () => alert("Ayarlar menüsü yapım aşamasında."));
     }
 
     btnShowCreate.addEventListener('click', () => showScreen('createRoom'));
@@ -350,7 +265,6 @@ function initAuth() {
     btnCreateCancel.addEventListener('click', () => showScreen('lobbyMenu'));
     btnJoinCancel.addEventListener('click', () => showScreen('lobbyMenu'));
 
-    // Oda İşlemleri
     btnCreateConfirm.addEventListener('click', createRoom);
     
     btnJoinConfirm.addEventListener('click', () => {
@@ -363,13 +277,20 @@ function initAuth() {
     });
 
     btnJoinRandom.addEventListener('click', joinRandom);
-    btnLeaveRoom.addEventListener('click', () => leaveRoom(false));
+    btnLeaveRoom.addEventListener('click', leaveRoom);
+    
+    btnStartGame.addEventListener('click', () => {
+        if(currentRoomId) {
+            socket.emit('startGame', currentRoomId);
+        }
+    });
 
-    // Auth State Change
+    // Auth Durum İzleyici
     auth.onAuthStateChanged((user) => {
         currentUser = user;
         if (user) {
-            document.getElementById('welcome-msg').textContent = `Merhaba, ${user.displayName}`;
+            if(document.getElementById('welcome-msg')) 
+                document.getElementById('welcome-msg').textContent = `Merhaba, ${user.displayName}`;
             showScreen('lobbyMenu');
         } else {
             showScreen('auth');
@@ -377,7 +298,6 @@ function initAuth() {
     });
 }
 
-// Başlat
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAuth);
 } else {
