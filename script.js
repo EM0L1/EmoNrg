@@ -197,9 +197,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	let dragStart = { x: 0, y: 0 };
 	let currentMouse = { x: 0, y: 0 };
 	
-	const FRICTION = 0.975;
-	const MAX_POWER = 18; 
-	const MAX_DRAG_DIST = 150; 
+	const FRICTION = 0.98; // 1 - 0.02 = 0.98, biraz daha hızlı yavaşlasın
+	const MAX_POWER = 28;  // Daha güçlü vuruşlar
+	const MAX_DRAG_DIST = 180; 
 	const STOP_THRESHOLD = 0.08;
 
 	// Canvas event listener'ları
@@ -347,15 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function update() {
-		if (isLevelTransitioning) {
-			// Topu deliğin içinde tut
-			ball.x = hole.x;
-			ball.y = hole.y;
-			ball.vx = 0;
-			ball.vy = 0;
-			return;
-		}
-
 		// Sub-stepping (Fizik adımları)
 		// Hızlı hareket eden topun duvarların içinden geçmesini (tunneling) önlemek için
 		// hareketi küçük parçalara bölüyoruz.
@@ -441,23 +432,23 @@ document.addEventListener('DOMContentLoaded', () => {
 		const dy = ball.y - hole.y;
 		const dist = Math.sqrt(dx*dx + dy*dy);
 		
-		if (!isLevelTransitioning && dist < (hole.radius + ball.radius * 0.5) && Math.abs(ball.vx) < 15 && Math.abs(ball.vy) < 15) {
+		// Top deliğin merkezine yeterince yakın ve hızı makul seviyedeyse içeri girmiş say
+		if (
+			!isLevelTransitioning &&
+			dist < hole.radius * 0.8 &&
+			Math.hypot(ball.vx, ball.vy) < 10
+		) {
 			isLevelTransitioning = true;
 			
-			// Puan Hesaplama
+			// Puan Hesaplama – vuruş sayısına göre azalan sabit puan
+			// Örnek skala: 1 vuruş:10, 2:9, 3:8, 4:7, 5:6, 6:5, 7:4, 8:3, 9:2, 10+:1
+			const BASE_POINTS = 10;
+			const maxStrokeForMinPoint = 10;
+			let points = BASE_POINTS - (currentStrokes - 1);
+			if (points < 1) points = 1;
+			if (currentStrokes >= maxStrokeForMinPoint) points = 1;
+			
 			const par = currentMap.par;
-			let points = 0;
-			
-			// Vuruş bazlı puan (1->5, 2->4, 3->3, 4->2, 5->1, >5->0)
-			if (currentStrokes === 1) points += 5;
-			else if (currentStrokes === 2) points += 4;
-			else if (currentStrokes === 3) points += 3;
-			else if (currentStrokes === 4) points += 2;
-			else if (currentStrokes === 5) points += 1;
-			
-			// Par bonusu
-			if (currentStrokes < par) points += 3;
-			else if (currentStrokes === par) points += 2;
 
 			const term = getScoreTerm(currentStrokes, par);
 			
@@ -488,15 +479,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 			statusEl.textContent = `${term}!`;
 			
-			// Topu deliğe sabitle
-			ball.vx = 0;
-			ball.vy = 0;
-			ball.x = hole.x;
-			ball.y = hole.y;
-
 			setTimeout(() => {
 				showScorecard(false, { term: term, points: points }); // false = oyun bitmedi, devam et butonu göster
-			}, 1000);
+			}, 300); // bekleme süresini kısalt
 		}
 	}
 
@@ -511,6 +496,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		const w = canvas.width;
 		const h = canvas.height;
 		ctx.clearRect(0, 0, w, h);
+
+		// Eğer seviye geçişi başladıysa haritayı çizmeyi durdur
+		// Böylece oyuncu sadece skor ekranına odaklanır.
+		if (isLevelTransitioning) {
+			return;
+		}
 
 		// Zemin
 		ctx.fillStyle = '#9ee6c9';
@@ -574,12 +565,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Açıyı hesapla
 		const angle = Math.atan2(dy, dx);
 
-		// Görsel uzunluk kısıtlaması (Kullanıcı isteği: çok uzun olmasın)
-		const MAX_VISUAL_LENGTH = 80;
+		// Görsel uzunluk kısıtlaması (daha kısa ok)
+		const MAX_VISUAL_LENGTH = 55;
 		const arrowLength = Math.min(dist, MAX_VISUAL_LENGTH);
 		
-		// Ok başlangıç ofseti (Topun içinden çıkmasın)
-		const startOffset = ball.radius + 5;
+		// Ok başlangıç ofseti (top merkezinden hemen sonra başlasın)
+		const startOffset = ball.radius; // tam top kenarından
 
 		// Ok çizimi
 		ctx.save();
@@ -599,14 +590,14 @@ document.addEventListener('DOMContentLoaded', () => {
 		ctx.closePath();
 
 		// Ok ucu
-		if (dist > 10) {
+		if (arrowLength > 12) {
 			ctx.beginPath();
 			ctx.fillStyle = '#ffffff';
-			// Uç kısmı gövdenin bittiği yere ekle
+			// Uç kısmı gövdenin bittiği noktaya tam otursun
 			const tipX = startOffset + arrowLength;
 			ctx.moveTo(tipX, 0);
-			ctx.lineTo(tipX - 10, -6);
-			ctx.lineTo(tipX - 10, 6);
+			ctx.lineTo(tipX - 10, -5);
+			ctx.lineTo(tipX - 10, 5);
 			ctx.fill();
 			ctx.stroke();
 			ctx.closePath();
