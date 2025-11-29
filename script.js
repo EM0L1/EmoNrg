@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	let currentMouse = { x: 0, y: 0 };
 	let aimAngle = null;
 	let powerPercent = 0; // 0-100 arası
+	let isAdjustingPower = false;
 	
 	const FRICTION = 0.98;
 	const MAX_POWER = 28;
@@ -159,16 +160,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	if (powerTouchArea) {
 		powerTouchArea.addEventListener('mousedown', (e) => {
+			isAdjustingPower = true;
 			updatePowerFromClientXY(e.clientX);
 		});
 		window.addEventListener('mousemove', (e) => {
-			if (e.buttons !== 1) return;
-			if (document.activeElement !== powerTouchArea && e.target !== powerTouchArea && !powerTouchArea.contains(e.target)) return;
+			if (!isAdjustingPower) return;
+			if (e.buttons !== 1) { isAdjustingPower = false; return; }
 			updatePowerFromClientXY(e.clientX);
+		});
+		window.addEventListener('mouseup', () => {
+			if (!isAdjustingPower) return;
+			isAdjustingPower = false;
+			fireShotIfPossible();
 		});
 		powerTouchArea.addEventListener('touchstart', (e) => {
 			if (e.touches.length > 1) return;
 			e.preventDefault();
+			isAdjustingPower = true;
 			updatePowerFromClientXY(e.touches[0].clientX);
 		}, { passive: false });
 		powerTouchArea.addEventListener('touchmove', (e) => {
@@ -176,24 +184,34 @@ document.addEventListener('DOMContentLoaded', () => {
 			e.preventDefault();
 			updatePowerFromClientXY(e.touches[0].clientX);
 		}, { passive: false });
+		powerTouchArea.addEventListener('touchend', () => {
+			if (!isAdjustingPower) return;
+			isAdjustingPower = false;
+			fireShotIfPossible();
+		});
 	}
 
-	// Vur butonu: son hedef açı + powerPercent ile topu at
+	// Güç ayarı bittiğinde ya da butona basıldığında atış fonksiyonu
+	function fireShotIfPossible() {
+		if (aimAngle === null) return; // yön yoksa atma
+		if (Math.abs(ball.vx) > 0.1 || Math.abs(ball.vy) > 0.1) return;
+		const power = (powerPercent / 100) * MAX_POWER;
+		if (power <= 0.5) return;
+		ball.vx = Math.cos(aimAngle) * power;
+		ball.vy = Math.sin(aimAngle) * power;
+		currentStrokes++;
+		const me = players.find(p => p.isMe);
+		if(me) {
+			me.totalStrokes++;
+		}
+		updateGameUI();
+		statusEl.textContent = "Atış yapıldı!";
+	}
+
+	// İstersen butonla da tetikleyebilelim
 	if (shootBtn) {
 		shootBtn.addEventListener('click', () => {
-			if (aimAngle === null) return; // yön yoksa atma
-			if (Math.abs(ball.vx) > 0.1 || Math.abs(ball.vy) > 0.1) return;
-			const power = (powerPercent / 100) * MAX_POWER;
-			if (power <= 0.5) return;
-			ball.vx = Math.cos(aimAngle) * power;
-			ball.vy = Math.sin(aimAngle) * power;
-			currentStrokes++;
-			const me = players.find(p => p.isMe);
-			if(me) {
-				me.totalStrokes++;
-			}
-			updateGameUI();
-			statusEl.textContent = "Atış yapıldı!";
+			fireShotIfPossible();
 		});
 	}
 
@@ -569,6 +587,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (!isDragging) return;
 		isDragging = false;
 		// Parmağı kaldırınca artık atış yapmıyoruz, sadece yön sabit kalıyor
+		// Aynı anda power bar görüntüsünü de açalım
+		powerContainer.classList.remove('hidden');
 	}
 
 });
