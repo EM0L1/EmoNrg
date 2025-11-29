@@ -180,7 +180,20 @@ function initAuth() {
         // Oda güncellendiğinde (herkese)
         socket.on('roomUpdated', (room) => {
             console.log("Oda güncellendi:", room.id);
-            // Eğer zaten bu odadaysak sadece UI'ı tazele
+            // Güvenlik için: currentUser henüz set edilmemiş olabilir
+            const me = currentUser 
+                ? Object.values(room.players).find(p => p.uid === currentUser.uid)
+                : null;
+
+            // Eğer bu kullanıcı bu odanın oyuncusuysa ve henüz currentRoomId set edilmediyse,
+            // (yedek senaryo: joinedRoom event'i bir şekilde kaçtıysa) odaya sok.
+            if (!currentRoomId && me) {
+                console.log("roomUpdated üzerinden odaya giriliyor (yedek yol):", room.id);
+                enterRoom(room.id, room);
+                return;
+            }
+
+            // Normal durum: Zaten bu odadaysak sadece UI'ı tazele
             if (currentRoomId === room.id) {
                 updateRoomUI(room);
             }
