@@ -89,7 +89,8 @@ io.on('connection', (socket) => {
         };
 
         socket.join(roomId);
-        io.to(roomId).emit('roomUpdated', room);
+        io.to(roomId).emit('roomUpdated', room);   // Odayı herkese güncelle
+        socket.emit('joinedRoom', { roomId, room }); // Sadece bu istemciye "sen artık bu odadasın" de
         console.log(`[KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${roomId}`);
     });
 
@@ -105,7 +106,8 @@ io.on('connection', (socket) => {
             const room = rooms[availableRoomId];
             room.players[socket.id] = { uid, name, score: 0, ready: false, x: 0, y: 0 };
             socket.join(availableRoomId);
-            io.to(availableRoomId).emit('roomUpdated', room);
+            io.to(availableRoomId).emit('roomUpdated', room);         // herkese güncelle
+            socket.emit('joinedRoom', { roomId: availableRoomId, room }); // sadece bu istemciye özel bilgi
             console.log(`[RASTGELE KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${availableRoomId}`);
         } else {
             socket.emit('error', 'Uygun oda bulunamadı. Lütfen yeni oda kurun.');

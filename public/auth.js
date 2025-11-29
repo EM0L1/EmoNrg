@@ -167,24 +167,21 @@ function initAuth() {
     function setupSocketListeners() {
         // Oda oluşturulduğunda (Kurucu için)
         socket.on('roomCreated', ({ roomId, room }) => {
-            console.log("Oda oluşturuldu:", roomId);
+            console.log("Oda oluşturuldu (ben kurucuyum):", roomId);
             enterRoom(roomId, room);
         });
 
-        // Oda güncellendiğinde (Katılanlar ve Kurucu için)
+        // Bu istemci başarılı şekilde bir odaya katıldığında (joinRoom / joinRandom sonrası)
+        socket.on('joinedRoom', ({ roomId, room }) => {
+            console.log("Bu istemci odaya katıldı:", roomId);
+            enterRoom(roomId, room);
+        });
+
+        // Oda güncellendiğinde (herkese)
         socket.on('roomUpdated', (room) => {
             console.log("Oda güncellendi:", room.id);
-            
-            // Eğer kullanıcı bu odadaysa ve henüz oda ekranında değilse ekranı değiştir
-            // (Örn: 'Katıl' butonuna bastı, sunucu onayladı, şimdi ekran değişmeli)
-            if (currentRoomId !== room.id) {
-                // Kullanıcı gerçekten bu odanın oyuncusu mu?
-                const me = Object.values(room.players).find(p => p.uid === currentUser.uid);
-                if (me) {
-                    enterRoom(room.id, room);
-                }
-            } else {
-                // Zaten odadayız, sadece listeyi güncelle
+            // Eğer zaten bu odadaysak sadece UI'ı tazele
+            if (currentRoomId === room.id) {
                 updateRoomUI(room);
             }
         });
