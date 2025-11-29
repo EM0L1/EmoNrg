@@ -296,13 +296,15 @@ function initAuth() {
         
         if (isHost) {
             btnStartGame.style.display = 'block';
-            if (players.length >= 4) {
+            // GEÇİCİ OLARAK minimum oyuncu sayısını 2'ye düşürdük
+            const MIN_PLAYERS = 2;
+            if (players.length >= MIN_PLAYERS) {
                 btnStartGame.disabled = false;
                 btnStartGame.textContent = "Oyunu Başlat";
                 roomStatusMsg.textContent = "Oyun başlatılabilir!";
             } else {
                 btnStartGame.disabled = true;
-                btnStartGame.textContent = `En az 4 kişi gerekli (${players.length}/4)`;
+                btnStartGame.textContent = `En az ${MIN_PLAYERS} kişi gerekli (${players.length}/${MIN_PLAYERS})`;
                 roomStatusMsg.textContent = "Oyuncular bekleniyor...";
             }
         } else {
@@ -313,10 +315,19 @@ function initAuth() {
 
     // --- EVENT LISTENERS ---
     if(btnAction) {
+        console.log("btn-auth-action bulundu, click listener eklendi.");
         btnAction.addEventListener('click', handleAuth);
     } else {
-        console.error("btnAction bulunamadı!");
+        console.error("btn-auth-action (Giriş Yap butonu) DOM'da bulunamadı!");
     }
+
+    // EKSTRA GÜVENLİK: Her tıklamada fallback kontrolü
+    document.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'btn-auth-action') {
+            console.log("Global click yakalandı: btn-auth-action");
+            handleAuth();
+        }
+    });
 
     if(btnToggleMode) btnToggleMode.addEventListener('click', toggleAuthMode);
     if(btnLogout) btnLogout.addEventListener('click', () => auth.signOut());
