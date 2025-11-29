@@ -2,8 +2,14 @@
 * { box-sizing: border-box; }
 html,body { height: 100%; margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: #2e7d32; color:#111; }
 
-.overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%); }
-.card { background: #fff; padding: 28px; border-radius: 12px; width: 92%; max-width: 460px; box-shadow: 0 8px 30px rgba(12,20,40,0.12); text-align:center; }
+.overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%); z-index: 100; }
+.overlay.hidden { display: none !important; pointer-events: none; }
+/* Loading screen en üstte olmalı */
+#loading-screen { z-index: 200; }
+/* Auth screen lobi'den üstte olmalı (gerçi lobi gizliyken sorun olmaz ama garanti olsun) */
+#auth-screen { z-index: 150; }
+
+.card { background: #fff; padding: 28px; border-radius: 12px; width: 92%; max-width: 460px; box-shadow: 0 8px 30px rgba(12,20,40,0.12); text-align:center; position: relative; z-index: 101; }
 .card h1 { margin: 0 0 6px; font-size: 22px; }
 .card h3 { margin: 0 0 10px; font-size: 18px; color: #333; }
 .card p { margin: 0 0 18px; color: #444; }
