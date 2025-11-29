@@ -42,7 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Oyuncu Bilgisi
 	let myPlayerId = null;
-	let players = [];  // { id, name, totalStrokes, totalScore, mapScores: {}, isMe }
+	let players = [];  // { id, name, uid?, totalStrokes, totalScore, mapScores: {}, isMe }
+    let isMultiplayer = false;
+    let myUid = null;
+
+    // Sunucudan gelen gerçek zamanlı top pozisyonları için
+    const remoteBalls = {}; // socketId -> { x, y }
+
+    const gameSocket = window.gameSocket || null;
 
 	// Skor Değişkenleri
 	let currentStrokes = 0;
@@ -107,20 +114,25 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
     // Çok oyunculu başlatıcı: oda bilgisini ve kendi uid'ini alır
-    // room.players = { socketId: { uid, name, ... }, ... }
-    window.startGameMultiplayer = function(room, myUid) {
+    // room.players = { socketId: { uid, name, score, ... }, ... }
+    window.startGameMultiplayer = function(room, myUidParam) {
         // Overlay'leri kapat
         const overlays = document.querySelectorAll('.overlay');
         overlays.forEach(el => el.classList.add('hidden'));
         gameMain.classList.remove('hidden');
+
+        isMultiplayer = true;
+        myUid = myUidParam;
+        window.currentRoomIdForGame = room.id;
 
         // Oyuncu listesini odadaki tüm oyunculardan oluştur
         const roomPlayers = Object.values(room.players || {});
         players = roomPlayers.map((p, index) => ({
             id: index + 1,                 // basit sıra numarası
             name: p.name,
+            uid: p.uid,
             totalStrokes: 0,
-            totalScore: 0,
+            totalScore: p.score || 0,
             mapScores: {},
             isMe: p.uid === myUid
         }));
@@ -140,6 +152,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Oyunu başlat
         drawInitialScene();
+    };
+
+    // Sunucudan gelen diğer oyuncuların top pozisyonlarını güncelle
+    window.updateRemoteBall = function(socketId, x, y) {
+        remoteBalls[socketId] = { x, y };
+    };
+
+    // Sunucudan gelen yeni delik bilgisiyle tüm oyuncuların skorlarını eşitle
+    window.advanceHole = function(room) {
+        if (!isMultiplayer) return;
+        // Skorları odadan senkronize et
+        const roomPlayers = room.players || {};
+        players.forEach(p => {
+            const serverPlayer = Object.values(roomPlayers).find(sp => sp.uid === p.uid);
+            if (serverPlayer) {
+                p.totalScore = serverPlayer.score || 0;
+            }
+        });
+        renderPlayerList();
+        updateScorecardUI();
+        // Skor kartını kapat ve bir sonraki haritaya geç
+        scorecardOverlay.classList.add('hidden');
+        loadMap(currentMapIndex + 1);
     };
 
 	// --- OYUN MANTIĞI ---
@@ -395,6 +430,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			renderPlayerList();
 
+            // Çok oyunculuda skoru sunucuya bildir
+            if (isMultiplayer && gameSocket && window.currentRoomIdForGame) {
+                gameSocket.emit('holeCompleted', {
+                    roomId: window.currentRoomIdForGame,
+                    points
+                });
+            }
+
 			statusEl.textContent = `${term}! Sonraki haritaya geçiliyor...`;
 			ball.vx = 0; 
 			ball.vy = 0;
@@ -413,6 +456,18 @@ document.addEventListener('DOMContentLoaded', () => {
 		update();
 		checkGameLogic();
 		draw();
+
+        // Top pozisyonunu sunucuya gönder (çok oyunculuda)
+        if (isMultiplayer && gameSocket && window.currentRoomIdForGame) {
+            gameSocket.emit('updatePosition', {
+                roomId: window.currentRoomIdForGame,
+                x: ball.x,
+                y: ball.y,
+                vx: ball.vx,
+                vy: ball.vy
+            });
+        }
+
 		requestAnimationFrame(gameLoop);
 	}
 
@@ -464,6 +519,19 @@ document.addEventListener('DOMContentLoaded', () => {
 			ctx.shadowColor = 'transparent'; 
 			ctx.closePath();
 		}
+
+        // Diğer oyuncuların toplarını çiz
+        if (isMultiplayer) {
+            ctx.fillStyle = '#f97316'; // turuncu
+            Object.keys(remoteBalls).forEach(id => {
+                const rb = remoteBalls[id];
+                if (!rb) return;
+                ctx.beginPath();
+                ctx.arc(rb.x, rb.y, ball.radius * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
 	}
 
 	function drawArrow() {

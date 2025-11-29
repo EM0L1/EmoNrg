@@ -41,6 +41,8 @@ function initAuth() {
         }
         socket = io();
         console.log("Socket.io bağlantısı kuruldu.");
+        // Oyun tarafının da kullanabilmesi için global'e at
+        window.gameSocket = socket;
         
         // Socket Event Dinleyicileri
         setupSocketListeners();
@@ -181,20 +183,7 @@ function initAuth() {
         // Oda güncellendiğinde (herkese)
         socket.on('roomUpdated', (room) => {
             console.log("Oda güncellendi:", room.id);
-            // Güvenlik için: currentUser henüz set edilmemiş olabilir
-            const me = currentUser 
-                ? Object.values(room.players).find(p => p.uid === currentUser.uid)
-                : null;
-
-            // Eğer bu kullanıcı bu odanın oyuncusuysa ve henüz currentRoomId set edilmediyse,
-            // (yedek senaryo: joinedRoom event'i bir şekilde kaçtıysa) odaya sok.
-            if (!currentRoomId && me) {
-                console.log("roomUpdated üzerinden odaya giriliyor (yedek yol):", room.id);
-                enterRoom(room.id, room);
-                return;
-            }
-
-            // Normal durum: Zaten bu odadaysak sadece UI'ı tazele
+            // Eğer zaten bu odadaysak sadece oda lobisini tazele
             if (currentRoomId === room.id) {
                 updateRoomUI(room);
             }
@@ -216,6 +205,14 @@ function initAuth() {
             } else if (window.startGameSingle) {
                 // Yedek: Eski tek oyunculu başlatıcı
                 window.startGameSingle(currentUser.displayName);
+            }
+        });
+
+        // Tüm oyuncular deliği tamamlayınca sunucudan advanceHole gelir
+        socket.on('advanceHole', (room) => {
+            console.log("Sunucudan advanceHole alındı. Yeni deliğe geçiliyor. Oda:", room.id);
+            if (window.advanceHole) {
+                window.advanceHole(room);
             }
         });
     }
@@ -262,6 +259,7 @@ function initAuth() {
 
     function enterRoom(roomId, room) {
         currentRoomId = roomId;
+        window.currentRoomIdForGame = roomId; // oyun tarafı için global
         showScreen('roomLobby');
         displayRoomCode.textContent = roomId;
         updateRoomUI(room);

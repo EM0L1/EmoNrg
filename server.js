@@ -176,6 +176,35 @@ io.on('connection', (socket) => {
         }
     });
 
+    // 7. BİR OYUNCU DELİĞİ TAMAMLADIĞINDA (SKOR GÜNCELLEME)
+    socket.on('holeCompleted', ({ roomId, points }) => {
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const player = room.players[socket.id];
+        if (!player) return;
+
+        // Skoru güncelle
+        player.score = (player.score || 0) + (points || 0);
+        player.finishedCurrentHole = true;
+
+        // Tüm oyuncular bu deliği bitirdiyse bir sonraki deliğe geç
+        const allFinished = Object.values(room.players).every(p => p.finishedCurrentHole);
+        if (allFinished) {
+            // Deliği ilerlet
+            room.currentHole = (room.currentHole || 0) + 1;
+            // Her oyuncu için finished bayrağını sıfırla
+            Object.values(room.players).forEach(p => { p.finishedCurrentHole = false; });
+
+            // Skorlar güncellenmiş oda durumunu gönder ve yeni deliğe geç sinyali ver
+            io.to(roomId).emit('advanceHole', room);
+            console.log(`[DELIK TAMAMLANDI] Oda: ${roomId}, Tüm oyuncular deliği bitirdi. Yeni delik index: ${room.currentHole}`);
+        } else {
+            // Sadece skor tablosunu tazelemek için güncel odayı yayınla
+            io.to(roomId).emit('roomUpdated', room);
+        }
+    });
+
     function handleDisconnect(socket) {
         const roomId = Object.keys(rooms).find(id => rooms[id].players[socket.id]);
         
