@@ -33,7 +33,8 @@ function generateRoomId() {
 }
 
 io.on('connection', (socket) => {
-    console.log('Biri bağlandı: ' + socket.id);
+    // Buradaki log sadece teknik bağlantıyı gösterir
+    // console.log('Biri bağlandı: ' + socket.id);
 
     // 1. ODA KURMA
     socket.on('createRoom', ({ uid, name, isPublic }) => {
@@ -58,7 +59,7 @@ io.on('connection', (socket) => {
 
         socket.join(roomId);
         socket.emit('roomCreated', { roomId, room: rooms[roomId] });
-        console.log(`Oda kuruldu: ${roomId} (Host: ${name})`);
+        console.log(`[ODA KURULDU] ID: ${roomId} - Kurucu: ${name} (UID: ${uid})`);
     });
 
     // 2. ODAYA KATILMA
@@ -89,7 +90,7 @@ io.on('connection', (socket) => {
 
         socket.join(roomId);
         io.to(roomId).emit('roomUpdated', room);
-        console.log(`${name} odaya katıldı: ${roomId}`);
+        console.log(`[KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${roomId}`);
     });
 
     // 3. RASTGELE KATILMA
@@ -105,7 +106,7 @@ io.on('connection', (socket) => {
             room.players[socket.id] = { uid, name, score: 0, ready: false, x: 0, y: 0 };
             socket.join(availableRoomId);
             io.to(availableRoomId).emit('roomUpdated', room);
-            console.log(`${name} rastgele odaya katıldı: ${availableRoomId}`);
+            console.log(`[RASTGELE KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${availableRoomId}`);
         } else {
             socket.emit('error', 'Uygun oda bulunamadı. Lütfen yeni oda kurun.');
         }
@@ -118,7 +119,7 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         handleDisconnect(socket);
-        console.log('Biri çıktı: ' + socket.id);
+        // console.log('Biri çıktı: ' + socket.id);
     });
 
     // 5. OYUNU BAŞLAT
@@ -127,7 +128,7 @@ io.on('connection', (socket) => {
         if(room && room.host === socket.id) {
             room.status = 'playing';
             io.to(roomId).emit('gameStarted');
-            console.log(`Oyun başladı: ${roomId}`);
+            console.log(`[OYUN BAŞLADI] Oda: ${roomId}`);
         }
     });
 
@@ -147,18 +148,24 @@ io.on('connection', (socket) => {
         
         if (roomId) {
             const room = rooms[roomId];
+            const player = room.players[socket.id]; // Oyuncu bilgilerini al
             const wasHost = (room.host === socket.id);
             
             delete room.players[socket.id];
             socket.leave(roomId);
 
+            console.log(`[AYRILMA] ${player ? player.name : 'Biri'} (UID: ${player ? player.uid : '?'}) odadan ayrıldı: ${roomId}`);
+
             if (Object.keys(room.players).length === 0) {
                 delete rooms[roomId];
-                console.log(`Oda silindi: ${roomId}`);
+                console.log(`[ODA SİLİNDİ] ${roomId} (Boşaldığı için)`);
             } else {
                 if (wasHost) {
                     const nextHostId = Object.keys(room.players)[0];
                     room.host = nextHostId;
+                    // Yeni hostun ismini bulalım
+                    const newHostName = room.players[nextHostId].name;
+                    console.log(`[YENİ HOST] Oda: ${roomId}, Yeni Host: ${newHostName}`);
                 }
                 io.to(roomId).emit('roomUpdated', room);
             }
