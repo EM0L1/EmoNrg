@@ -229,11 +229,21 @@ function initAuth() {
 
     function joinRoom(code) {
         if (!currentUser) return;
+        const roomId = code.toUpperCase();
+
+        // Sunucuya katılma isteği gönder
         socket.emit('joinRoom', {
-            roomId: code.toUpperCase(),
+            roomId,
             uid: currentUser.uid,
             name: currentUser.displayName
         });
+
+        // OPTİMİSTİK UI: Sunucudan cevap beklemeden oda lobisine geç
+        console.log("joinRoom çağrıldı, UI oda lobisine geçiriliyor:", roomId);
+        currentRoomId = roomId;
+        showScreen('roomLobby');
+        displayRoomCode.textContent = roomId;
+        // Liste ilk roomUpdated / joinedRoom geldiğinde dolacak
     }
 
     function joinRandom() {
