@@ -8,7 +8,25 @@
 </head>
 <body>
 
-	<div id="lobby" class="overlay">
+	<div id="auth-screen" class="overlay">
+		<div class="card">
+			<h1 id="auth-title">Giriş Yap</h1>
+			<p>Devam etmek için giriş yapın.</p>
+
+			<div id="auth-form">
+				<input id="auth-nickname" type="text" placeholder="Kullanıcı Adı (Nickname)" maxlength="20" />
+				<input id="auth-password" type="password" placeholder="Şifre" style="margin-top:10px;" />
+				
+				<p id="auth-error" class="error hidden"></p>
+
+				<button id="btn-auth-action" class="btn primary large">Giriş Yap</button>
+				
+				<button id="btn-toggle-mode" class="link-btn">Hesabın yok mu? Kayıt Ol</button>
+			</div>
+		</div>
+	</div>
+
+	<div id="lobby" class="overlay hidden">
 		<div class="card">
 			<h1>EmoNrg Mini Golf</h1>
 
@@ -102,6 +120,7 @@
       </aside>
     </section>
   </main>	<script src="maps.js"></script>
+	<script type="module" src="auth.js"></script>
 	<script src="script.js"></script>
 </body>
 </html>
