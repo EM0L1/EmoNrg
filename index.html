@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>EmoNrg Mini Golf - Demo</title>
+	<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+	<div id="lobby" class="overlay">
+		<div class="card">
+			<h1>EmoNrg Mini Golf</h1>
+
+			<div id="start-area">
+				<p>Sıra tabanlı online mini golf oyununa hoş geldiniz.</p>
+				<div class="menu-buttons">
+					<button id="btn-single" class="btn primary large">TEK OYUNCULU</button>
+					<button id="btn-multi" class="btn large" style="margin-top: 10px;">ÇOK OYUNCULU</button>
+					<button id="btn-settings" class="btn large" style="margin-top: 10px;">AYARLAR</button>
+				</div>
+			</div>
+
+			<div id="multiplayer-area" class="hidden">
+				<h3>Çok Oyunculu</h3>
+				<p>Bu mod henüz yapım aşamasında.</p>
+				<button id="btn-back-multi" class="btn">Geri Dön</button>
+			</div>
+
+			<div id="settings-area" class="hidden">
+				<h3>Ayarlar</h3>
+				<p>Ayarlar menüsü yapım aşamasında.</p>
+				<button id="btn-back-settings" class="btn">Geri Dön</button>
+			</div>
+
+			<div id="name-area" class="hidden">
+				<p>Lütfen oyunda kullanmak için bir isim girin.</p>
+				<input id="player-name" type="text" placeholder="İsminizi girin" maxlength="20" />
+				<div class="row">
+					<button id="join-btn" class="btn primary">Katıl</button>
+					<button id="cancel-name" class="btn">Vazgeç</button>
+				</div>
+				<p id="name-error" class="error hidden">Lütfen geçerli bir isim girin.</p>
+			</div>
+		</div>
+	</div>
+
+	  <div id="loading-screen" class="overlay hidden">
+    <div class="loading-content">
+      <div class="golf-ball-icon"></div>
+      <h2>Mini Golf Arena</h2>
+      <p>Sonraki harita yükleniyor...</p>
+    </div>
+  </div>
+
+  <main id="game" class="hidden">
+		<header class="topbar">
+			<div>Oyuncu: <span id="display-name">-</span></div>
+			<div id="status">Lobiye bağlanmadı</div>
+		</header>
+
+    <section class="game-container">
+      <div class="canvas-wrapper">
+        <canvas id="game-canvas" width="800" height="500"></canvas>
+      </div>
+      <aside class="player-sidebar">
+        <h3>Oyuncular</h3>
+        <ul id="player-list">
+          <!-- Oyuncu listesi buraya gelecek -->
+        </ul>
+      </aside>
+    </section>
+  </main>	<script src="maps.js"></script>
+	<script src="script.js"></script>
+</body>
+</html>
