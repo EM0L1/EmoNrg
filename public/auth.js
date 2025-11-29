@@ -222,6 +222,14 @@ function initAuth() {
                 window.advanceHole(room);
             }
         });
+
+        // Tüm oyuncular deliği bitirdiğinde (ama henüz sonraki deliğe geçilmeden)
+        socket.on('holeAllFinished', (room) => {
+            console.log("Tüm oyuncular deliği bitirdi, butonlar aktif ediliyor. Oda:", room.id);
+            if (window.enableNextHoleButton) {
+                window.enableNextHoleButton(room);
+            }
+        });
     }
 
     // --- ODA YÖNETİMİ ---

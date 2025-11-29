@@ -193,19 +193,43 @@ io.on('connection', (socket) => {
         }
         player.finishedCurrentHole = true;
 
-        // Tüm oyuncular bu deliği bitirdiyse bir sonraki deliğe geç
+        // Tüm oyuncular deliği bitirdi mi?
         const allFinished = Object.values(room.players).every(p => p.finishedCurrentHole);
         if (allFinished) {
-            // Deliği ilerlet
-            room.currentHole = (room.currentHole || 0) + 1;
-            // Her oyuncu için finished bayrağını sıfırla
-            Object.values(room.players).forEach(p => { p.finishedCurrentHole = false; });
+            // Herkese "artık tüm oyuncular deliği bitirdi" bilgisini gönder
+            io.to(roomId).emit('holeAllFinished', room);
+            console.log(`[DELIK TAMAMLANDI] Oda: ${roomId}, tüm oyuncular deliği bitirdi. Hazır bekleniyor.`);
+        }
 
-            // Skorlar güncellenmiş oda durumunu gönder ve yeni deliğe geç sinyali ver
+        // Skor tablosunu güncel tutmak için her durumda oda durumunu yayınla
+        io.to(roomId).emit('roomUpdated', room);
+    });
+
+    // 8. OYUNCULAR BİR SONRAKİ DELİĞE HAZIR OLDUĞUNU BİLDİRDİĞİNDE
+    socket.on('readyNextHole', ({ roomId }) => {
+        const room = rooms[roomId];
+        if (!room) return;
+        const player = room.players[socket.id];
+        if (!player) return;
+
+        player.readyForNextHole = true;
+
+        const allReady = Object.values(room.players).every(
+            p => p.finishedCurrentHole && p.readyForNextHole
+        );
+
+        if (allReady) {
+            // Yeni deliğe geç
+            room.currentHole = (room.currentHole || 0) + 1;
+            Object.values(room.players).forEach(p => {
+                p.finishedCurrentHole = false;
+                p.readyForNextHole = false;
+            });
+
             io.to(roomId).emit('advanceHole', room);
-            console.log(`[DELIK TAMAMLANDI] Oda: ${roomId}, Tüm oyuncular deliği bitirdi. Yeni delik index: ${room.currentHole}`);
+            console.log(`[SONRAKİ DELİK] Oda: ${roomId}, tüm oyuncular hazır. Yeni delik index: ${room.currentHole}`);
         } else {
-            // Sadece skor tablosunu tazelemek için güncel odayı yayınla
+            // Sadece bilgi amaçlı lobi güncellemesi
             io.to(roomId).emit('roomUpdated', room);
         }
     });

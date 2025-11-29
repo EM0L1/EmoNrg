@@ -55,8 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sunucudan gelen gerçek zamanlı top pozisyonları için
     const remoteBalls = {}; // socketId -> { x, y }
 
-    const gameSocket = window.gameSocket || null;
-
 	// Skor Değişkenleri
 	let currentStrokes = 0;
 	let scoreHistory = [];
@@ -188,7 +186,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sunucudan gelen yeni delik bilgisiyle tüm oyuncuların skorlarını ve map skorlarını eşitle
     window.advanceHole = function(room) {
         if (!isMultiplayer) return;
-        // Skorları odadan senkronize et
+        syncPlayersFromRoom(room);
+        // Skor kartını kapat ve bir sonraki haritaya geç
+        scorecardOverlay.classList.add('hidden');
+        loadMap(currentMapIndex + 1);
+    };
+
+    // Tüm oyuncular deliği bitirdiğinde "Hazırım" butonunu aktifleştir
+    window.enableNextHoleButton = function(room) {
+        if (!isMultiplayer) return;
+        syncPlayersFromRoom(room);
+        renderPlayerList();
+        updateScorecardUI();
+        if (btnCloseScorecard) {
+            btnCloseScorecard.disabled = false;
+            btnCloseScorecard.textContent = 'Sonraki deliğe hazırım';
+        }
+    };
+
+    // Yardımcı: server odasından oyuncu skorlarını ve map skorlarını players dizisine uygula
+    function syncPlayersFromRoom(room) {
         const roomPlayers = room.players || {};
         players.forEach(p => {
             const serverPlayer = Object.values(roomPlayers).find(sp => sp.uid === p.uid);
@@ -197,12 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 p.mapScores = serverPlayer.mapScores || {};
             }
         });
-        renderPlayerList();
-        updateScorecardUI();
-        // Skor kartını kapat ve bir sonraki haritaya geç
-        scorecardOverlay.classList.add('hidden');
-        loadMap(currentMapIndex + 1);
-    };
+    }
 
 	// --- OYUN MANTIĞI ---
 	let ball = { x: 100, y: 250, vx: 0, vy: 0, radius: 8 };
@@ -421,8 +433,18 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	btnCloseScorecard.addEventListener('click', () => {
-        // Çok oyunculuda ileri geçiş sunucu tarafından yönetilecek
-        if (isMultiplayer) return;
+        // Çok oyunculuda: hazır olduğunu sunucuya bildir
+        if (isMultiplayer) {
+            if (window.gameSocket && window.currentRoomIdForGame) {
+                window.gameSocket.emit('readyNextHole', {
+                    roomId: window.currentRoomIdForGame
+                });
+                btnCloseScorecard.disabled = true;
+                btnCloseScorecard.textContent = 'Diğer oyuncuların hazır olması bekleniyor...';
+            }
+            return;
+        }
+        // Tek oyunculu: doğrudan sonraki haritaya geç
 		scorecardOverlay.classList.add('hidden');
 		loadMap(currentMapIndex + 1);
 	});
@@ -541,25 +563,29 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderPlayerList();
 
             // Çok oyunculuda skoru sunucuya bildir
-            if (isMultiplayer && gameSocket && window.currentRoomIdForGame) {
-                gameSocket.emit('holeCompleted', {
+            if (isMultiplayer && window.gameSocket && window.currentRoomIdForGame) {
+                window.gameSocket.emit('holeCompleted', {
                     roomId: window.currentRoomIdForGame,
                     points,
                     mapId: currentMap.id
                 });
             }
 
-			statusEl.textContent = `${term}! Sonraki haritaya geçiliyor...`;
+			statusEl.textContent = `${term}!`;
 			ball.vx = 0; 
 			ball.vy = 0;
 			ball.x = hole.x;
 			ball.y = hole.y;
 			
-			statusEl.textContent = `${term}!`;
-			
-			setTimeout(() => {
-				showScorecard(false, { term: term, points: points }); 
-			}, 300);
+			// Tek oyunculu: küçük bir gecikmeyle skor kartını göster
+			if (!isMultiplayer) {
+				setTimeout(() => {
+					showScorecard(false, { term: term, points: points }); 
+				}, 300);
+			} else {
+				// Çok oyunculu: hemen skor kartını göster, ilerlemeyi sunucu yönetecek
+				showScorecard(false, { term: term, points: points });
+			}
 		}
 	}
 
@@ -569,8 +595,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		draw();
 
         // Top pozisyonunu sunucuya gönder (çok oyunculuda)
-        if (isMultiplayer && gameSocket && window.currentRoomIdForGame) {
-            gameSocket.emit('updatePosition', {
+        if (isMultiplayer && window.gameSocket && window.currentRoomIdForGame) {
+            window.gameSocket.emit('updatePosition', {
                 roomId: window.currentRoomIdForGame,
                 x: ball.x,
                 y: ball.y,
