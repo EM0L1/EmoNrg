@@ -1,0 +1,168 @@
+/* Temel stiller */
+* { box-sizing: border-box; }
+html,body { height: 100%; margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: #2e7d32; color:#111; }
+
+.overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%); z-index: 100; }
+.overlay.hidden { display: none !important; pointer-events: none; }
+/* Loading screen en üstte olmalı */
+#loading-screen { z-index: 200; }
+/* Auth screen lobi'den üstte olmalı (gerçi lobi gizliyken sorun olmaz ama garanti olsun) */
+#auth-screen { z-index: 150; }
+
+.card { background: #fff; padding: 28px; border-radius: 12px; width: 92%; max-width: 460px; box-shadow: 0 8px 30px rgba(12,20,40,0.12); text-align:center; position: relative; z-index: 101; }
+.card h1 { margin: 0 0 6px; font-size: 22px; }
+.card h3 { margin: 0 0 10px; font-size: 18px; color: #333; }
+.card p { margin: 0 0 18px; color: #444; }
+
+.btn { appearance: none; border: 1px solid #cbd5e1; background: #fff; padding: 10px 14px; border-radius: 8px; cursor:pointer; font-weight:600; transition: all 0.2s; }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.btn.primary { background: #2563eb; color:#fff; border-color: #2563eb; }
+.btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; border-color: #94a3b8; }
+.btn.large { font-size: 18px; padding: 16px 32px; width: 100%; margin-top: 10px; }
+.btn.small { width: auto; padding: 6px 12px; font-size: 14px; }
+
+.hidden { display: none !important; }
+.row { display:flex; gap:8px; justify-content:center; margin-top:10px }
+input[type="text"], input[type="password"] { width: 100%; padding:10px 12px; border-radius:8px; border:1px solid #d1d5db; font-size:15px; }
+.error { color:#c53030; font-size:13px; margin-top:8px; }
+
+.divider { margin: 15px 0; color: #64748b; font-size: 14px; position: relative; }
+.divider::before, .divider::after { content: ""; position: absolute; top: 50%; width: 40%; height: 1px; background: #e2e8f0; }
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+.link-btn { background: none; border: none; color: #2563eb; text-decoration: underline; cursor: pointer; font-size: 14px; margin-top: 15px; display: block; width: 100%; }
+.link-btn:hover { color: #1d4ed8; }
+
+/* Switch Button */
+.switch-container { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 10px; background: #f8fafc; border-radius: 8px; }
+.switch-container input { display: none; }
+.checkmark {
+    position: relative; width: 50px; height: 26px; background: #cbd5e1; border-radius: 13px; transition: 0.3s;
+}
+.checkmark:after {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s;
+}
+input:checked ~ .checkmark { background: #2563eb; }
+input:checked ~ .checkmark:after { transform: translateX(24px); }
+
+/* Oda İçi */
+.room-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 15px; }
+.player-list-grid {
+    list-style: none; padding: 0; margin: 20px 0;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+}
+.player-list-grid li {
+    background: #f1f5f9; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+}
+.player-list-grid li.empty {
+    background: #fff; border: 2px dashed #e2e8f0; color: #94a3b8; justify-content: center;
+}
+.avatar { font-size: 20px; }
+
+/* Oyun ekranı */
+.topbar { display:flex; justify-content:space-between; align-items:center; padding:10px 18px; background: #f8fafc; border-bottom:1px solid #e6eef6 }
+
+.game-container { display: flex; gap: 20px; padding: 20px; justify-content: center; align-items: flex-start; }
+.canvas-wrapper { flex: 0 0 auto; position: relative; }
+
+/* Güç barını oyun alanının dışına taşıyoruz */
+#power-container {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  width: 320px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 12px;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  z-index: 900; /* canvas üstünde ama overlay'den altta */
+}
+
+.power-bar-bg {
+  width: 100%;
+  height: 14px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+}
+
+#power-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #4ade80 0%, #facc15 50%, #ef4444 100%);
+}
+
+canvas { background: linear-gradient(180deg,#d1f7e7,#bfeedd); border-radius:8px; box-shadow: 0 6px 18px rgba(8,16,30,0.08); max-width: 100%; height: auto; display: block; }
+
+.player-sidebar {
+  flex: 0 0 250px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  min-height: 500px;
+}
+.player-sidebar h3 { margin-top: 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; font-size: 18px; color: #334155; }
+#player-list { list-style: none; padding: 0; margin: 0; }
+#player-list li { padding: 10px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+#player-list li .p-name { font-weight: 600; color: #0f172a; }
+#player-list li .p-id { font-size: 12px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+
+@media (max-width:900px) {
+  .game-container { flex-direction: column; align-items: stretch; padding: 10px; gap: 15px; }
+  .canvas-wrapper { width: 100%; display: flex; justify-content: center; }
+  .player-sidebar { width: 100%; min-height: auto; flex: none; }
+  canvas { width: 100%; height: auto; aspect-ratio: 800/500; }
+}
+
+@media (max-width:640px) {
+  .card { padding: 20px; width: 95%; }
+  .card h1 { font-size: 20px; }
+  .btn.large { font-size: 16px; padding: 14px 20px; }
+  
+  .topbar { padding: 8px 12px; font-size: 14px; }
+  .game-container { padding: 10px 5px; }
+  
+  /* Mobilde sidebar daha kompakt olsun */
+  .player-sidebar { padding: 12px; }
+  .player-sidebar h3 { font-size: 16px; margin-bottom: 8px; }
+  #player-list li { padding: 8px; font-size: 14px; }
+}
+
+/* Loading Screen */
+.loading-content { text-align: center; color: white; }
+.loading-content h2 { font-size: 32px; margin: 20px 0 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.loading-content p { font-size: 16px; opacity: 0.9; }
+
+.golf-ball-icon {
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db);
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  animation: bounce 1s infinite alternate ease-in-out;
+}
+/* Simple dimples effect using repeating radial gradient */
+.golf-ball-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-image: radial-gradient(#b0b0b0 1px, transparent 1px);
+  background-size: 6px 6px;
+  opacity: 0.3;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-20px); }
+}
