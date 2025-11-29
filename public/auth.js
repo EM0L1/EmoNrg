@@ -19,17 +19,24 @@ function initAuth() {
 
     // 1. Firebase Auth Başlat
     try {
+        if (typeof firebase === 'undefined') {
+            throw new Error("Firebase kütüphaneleri yüklenemedi!");
+        }
         if (!firebase.apps.length) app = firebase.initializeApp(firebaseConfig);
         else app = firebase.app();
         auth = firebase.auth();
         console.log("Firebase Auth başlatıldı.");
     } catch (e) {
         console.error("Firebase Hatası:", e);
+        alert("Firebase yüklenemedi. İnternet bağlantınızı kontrol edin.");
         return;
     }
 
     // 2. Socket.io Bağlantısı
     try {
+        if (typeof io === 'undefined') {
+            throw new Error("Socket.io kütüphanesi yüklenemedi!");
+        }
         socket = io();
         console.log("Socket.io bağlantısı kuruldu.");
         
@@ -96,6 +103,7 @@ function initAuth() {
 
     // --- AUTH İŞLEMLERİ ---
     async function handleAuth() {
+        console.log("handleAuth tetiklendi. Mod:", isRegisterMode ? "Kayıt" : "Giriş");
         const nickname = nicknameInput.value;
         const password = passwordInput.value;
 
@@ -110,13 +118,23 @@ function initAuth() {
 
         try {
             if (isRegisterMode) {
+                console.log("Kayıt isteği gönderiliyor...");
                 const cred = await auth.createUserWithEmailAndPassword(email, password);
+                console.log("Kayıt başarılı, profil güncelleniyor...");
                 await cred.user.updateProfile({ displayName: nickname });
             } else {
+                console.log("Giriş isteği gönderiliyor...");
                 await auth.signInWithEmailAndPassword(email, password);
             }
+            console.log("İşlem tamamlandı.");
         } catch (error) {
-            authError.textContent = error.message;
+            console.error("Auth Hatası:", error);
+            let msg = error.message;
+            if (error.code === 'auth/email-already-in-use') msg = "Bu kullanıcı adı zaten alınmış.";
+            if (error.code === 'auth/invalid-credential') msg = "Kullanıcı adı veya şifre hatalı.";
+            if (error.code === 'auth/network-request-failed') msg = "İnternet bağlantısı yok.";
+            
+            authError.textContent = msg;
             authError.classList.remove('hidden');
             btnAction.disabled = false;
         }
@@ -127,6 +145,7 @@ function initAuth() {
         document.getElementById('auth-title').textContent = isRegisterMode ? "Kayıt Ol" : "Giriş Yap";
         btnAction.textContent = isRegisterMode ? "Kayıt Ol" : "Giriş Yap";
         btnToggleMode.textContent = isRegisterMode ? "Zaten hesabın var mı? Giriş Yap" : "Hesabın yok mu? Kayıt Ol";
+        authError.classList.add('hidden');
     }
 
     // --- SOCKET.IO EVENTLERİ ---
@@ -244,9 +263,14 @@ function initAuth() {
     }
 
     // --- EVENT LISTENERS ---
-    btnAction.addEventListener('click', handleAuth);
-    btnToggleMode.addEventListener('click', toggleAuthMode);
-    btnLogout.addEventListener('click', () => auth.signOut());
+    if(btnAction) {
+        btnAction.addEventListener('click', handleAuth);
+    } else {
+        console.error("btnAction bulunamadı!");
+    }
+
+    if(btnToggleMode) btnToggleMode.addEventListener('click', toggleAuthMode);
+    if(btnLogout) btnLogout.addEventListener('click', () => auth.signOut());
 
     if(btnSingleplayer) {
         btnSingleplayer.addEventListener('click', () => {
@@ -260,14 +284,14 @@ function initAuth() {
         btnSettings.addEventListener('click', () => alert("Ayarlar menüsü yapım aşamasında."));
     }
 
-    btnShowCreate.addEventListener('click', () => showScreen('createRoom'));
-    btnShowJoin.addEventListener('click', () => showScreen('joinRoom'));
-    btnCreateCancel.addEventListener('click', () => showScreen('lobbyMenu'));
-    btnJoinCancel.addEventListener('click', () => showScreen('lobbyMenu'));
+    if(btnShowCreate) btnShowCreate.addEventListener('click', () => showScreen('createRoom'));
+    if(btnShowJoin) btnShowJoin.addEventListener('click', () => showScreen('joinRoom'));
+    if(btnCreateCancel) btnCreateCancel.addEventListener('click', () => showScreen('lobbyMenu'));
+    if(btnJoinCancel) btnJoinCancel.addEventListener('click', () => showScreen('lobbyMenu'));
 
-    btnCreateConfirm.addEventListener('click', createRoom);
+    if(btnCreateConfirm) btnCreateConfirm.addEventListener('click', createRoom);
     
-    btnJoinConfirm.addEventListener('click', () => {
+    if(btnJoinConfirm) btnJoinConfirm.addEventListener('click', () => {
         const code = roomCodeInput.value.trim();
         if(code.length === 6) joinRoom(code);
         else {
@@ -276,10 +300,10 @@ function initAuth() {
         }
     });
 
-    btnJoinRandom.addEventListener('click', joinRandom);
-    btnLeaveRoom.addEventListener('click', leaveRoom);
+    if(btnJoinRandom) btnJoinRandom.addEventListener('click', joinRandom);
+    if(btnLeaveRoom) btnLeaveRoom.addEventListener('click', leaveRoom);
     
-    btnStartGame.addEventListener('click', () => {
+    if(btnStartGame) btnStartGame.addEventListener('click', () => {
         if(currentRoomId) {
             socket.emit('startGame', currentRoomId);
         }
@@ -289,10 +313,12 @@ function initAuth() {
     auth.onAuthStateChanged((user) => {
         currentUser = user;
         if (user) {
+            console.log("Kullanıcı girişi doğrulandı:", user.displayName);
             if(document.getElementById('welcome-msg')) 
                 document.getElementById('welcome-msg').textContent = `Merhaba, ${user.displayName}`;
             showScreen('lobbyMenu');
         } else {
+            console.log("Kullanıcı çıkış yaptı.");
             showScreen('auth');
         }
     });
