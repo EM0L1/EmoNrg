@@ -208,6 +208,13 @@ function initAuth() {
             }
         });
 
+        // Diğer oyuncuların topu hareket ettiğinde
+        socket.on('playerMoved', ({ socketId, x, y }) => {
+            if (window.updateRemoteBall) {
+                window.updateRemoteBall(socketId, x, y);
+            }
+        });
+
         // Tüm oyuncular deliği tamamlayınca sunucudan advanceHole gelir
         socket.on('advanceHole', (room) => {
             console.log("Sunucudan advanceHole alındı. Yeni deliğe geçiliyor. Oda:", room.id);

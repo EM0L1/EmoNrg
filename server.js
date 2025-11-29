@@ -176,8 +176,8 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 7. BİR OYUNCU DELİĞİ TAMAMLADIĞINDA (SKOR GÜNCELLEME)
-    socket.on('holeCompleted', ({ roomId, points }) => {
+    // 7. BİR OYUNCU DELİĞİ TAMAMLADIĞINDA (SKOR & MAP SKORU GÜNCELLEME)
+    socket.on('holeCompleted', ({ roomId, points, mapId }) => {
         const room = rooms[roomId];
         if (!room) return;
 
@@ -186,6 +186,11 @@ io.on('connection', (socket) => {
 
         // Skoru güncelle
         player.score = (player.score || 0) + (points || 0);
+        // Harita bazlı skorları tut
+        if (mapId !== undefined) {
+            if (!player.mapScores) player.mapScores = {};
+            player.mapScores[mapId] = points;
+        }
         player.finishedCurrentHole = true;
 
         // Tüm oyuncular bu deliği bitirdiyse bir sonraki deliğe geç

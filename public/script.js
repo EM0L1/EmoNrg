@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         remoteBalls[socketId] = { x, y };
     };
 
-    // Sunucudan gelen yeni delik bilgisiyle tüm oyuncuların skorlarını eşitle
+    // Sunucudan gelen yeni delik bilgisiyle tüm oyuncuların skorlarını ve map skorlarını eşitle
     window.advanceHole = function(room) {
         if (!isMultiplayer) return;
         // Skorları odadan senkronize et
@@ -194,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const serverPlayer = Object.values(roomPlayers).find(sp => sp.uid === p.uid);
             if (serverPlayer) {
                 p.totalScore = serverPlayer.score || 0;
+                p.mapScores = serverPlayer.mapScores || {};
             }
         });
         renderPlayerList();
@@ -404,11 +405,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			btnCloseScorecard.classList.add('hidden');
 		} else {
 			btnRestartGame.classList.add('hidden');
-			btnCloseScorecard.classList.remove('hidden');
+
+            // Tek oyunculu: oyuncu "Devam Et" ile sonraki haritaya geçebilir
+            if (!isMultiplayer) {
+                btnCloseScorecard.disabled = false;
+                btnCloseScorecard.textContent = 'Devam Et';
+                btnCloseScorecard.classList.remove('hidden');
+            } else {
+                // Çok oyunculu: diğer oyuncular bitirene kadar bekle
+                btnCloseScorecard.disabled = true;
+                btnCloseScorecard.textContent = 'Diğer oyuncular bekleniyor...';
+                btnCloseScorecard.classList.remove('hidden');
+            }
 		}
 	}
 
 	btnCloseScorecard.addEventListener('click', () => {
+        // Çok oyunculuda ileri geçiş sunucu tarafından yönetilecek
+        if (isMultiplayer) return;
 		scorecardOverlay.classList.add('hidden');
 		loadMap(currentMapIndex + 1);
 	});
@@ -530,7 +544,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isMultiplayer && gameSocket && window.currentRoomIdForGame) {
                 gameSocket.emit('holeCompleted', {
                     roomId: window.currentRoomIdForGame,
-                    points
+                    points,
+                    mapId: currentMap.id
                 });
             }
 
