@@ -119,14 +119,15 @@ function initAuth() {
         btnAction.disabled = true;
 
         try {
+            let cred;
             if (isRegisterMode) {
                 console.log("Kayıt isteği gönderiliyor...");
-                const cred = await auth.createUserWithEmailAndPassword(email, password);
+                cred = await auth.createUserWithEmailAndPassword(email, password);
                 console.log("Kayıt başarılı, profil güncelleniyor...");
                 await cred.user.updateProfile({ displayName: nickname });
             } else {
                 console.log("Giriş isteği gönderiliyor...");
-                await auth.signInWithEmailAndPassword(email, password);
+                cred = await auth.signInWithEmailAndPassword(email, password);
             }
             console.log("İşlem tamamlandı.");
 
@@ -134,7 +135,7 @@ function initAuth() {
             authError.classList.add('hidden');
             btnAction.disabled = false;
 
-            currentUser = auth.currentUser;
+            currentUser = cred.user; // auth.currentUser yerine direkt dönen user'ı kullan
             if (currentUser) {
                 const welcomeEl = document.getElementById('welcome-msg');
                 if (welcomeEl) {
