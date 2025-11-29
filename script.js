@@ -322,11 +322,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		const dx = ball.x - hole.x;
 		const dy = ball.y - hole.y;
 		const dist = Math.sqrt(dx*dx + dy*dy);
+		const speed = Math.hypot(ball.vx, ball.vy);
+		
+		// Topun büyük kısmı deliğin üstündeyse ve hız çok uçuk değilse içeri girmiş say
+		const holeEnterThreshold = hole.radius * 0.9; // %90'a kadar genişlettik
+		const MAX_HOLE_SPEED = 16;  // biraz daha hızlı şutları da kabul et
 		
 		if (
 			!isLevelTransitioning &&
-			dist < hole.radius * 0.8 &&
-			Math.hypot(ball.vx, ball.vy) < 10
+			dist < holeEnterThreshold &&
+			speed <= MAX_HOLE_SPEED
 		) {
 			isLevelTransitioning = true;
 			

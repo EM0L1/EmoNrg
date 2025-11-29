@@ -3,7 +3,7 @@ const GAME_MAPS = [
   {
     id: 1,
     par: 3,
-    start: { x: 50, y: 450 },
+    start: { x: 50, y: 50 },
     hole: { x: 750, y: 50 },
     walls: [
       { x: 250, y: 0, w: 20, h: 350 },

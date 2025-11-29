@@ -97,7 +97,6 @@ input:checked ~ .checkmark:after { transform: translateX(24px); }
   width: 0%;
   height: 100%;
   background: linear-gradient(90deg, #4ade80 0%, #facc15 50%, #ef4444 100%);
-  transition: width 0.1s linear;
 }
 
 canvas { background: linear-gradient(180deg,#d1f7e7,#bfeedd); border-radius:8px; box-shadow: 0 6px 18px rgba(8,16,30,0.08); max-width: 100%; height: auto; display: block; }
