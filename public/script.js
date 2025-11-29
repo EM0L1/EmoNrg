@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Oyuncu Bilgisi
 	let myPlayerId = null;
-	let players = []; 
+	let players = [];  // { id, name, totalStrokes, totalScore, mapScores: {}, isMe }
 
 	// Skor Değişkenleri
 	let currentStrokes = 0;
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 
-    // showGame artık global scope'ta
+    // Tek oyunculu başlatma (eski mod)
 	window.showGame = function(name) {
 		// Eğer açık olan diğer overlay'ler varsa kapat
         const overlays = document.querySelectorAll('.overlay');
@@ -100,11 +100,47 @@ document.addEventListener('DOMContentLoaded', () => {
 		drawInitialScene();
 	}
 
-    // Global başlatıcı
+    // Global başlatıcı (tek oyunculu)
 	window.startGameSingle = function(playerName) {
 		localStorage.setItem('playerName', playerName);
 		window.showGame(playerName);
 	};
+
+    // Çok oyunculu başlatıcı: oda bilgisini ve kendi uid'ini alır
+    // room.players = { socketId: { uid, name, ... }, ... }
+    window.startGameMultiplayer = function(room, myUid) {
+        // Overlay'leri kapat
+        const overlays = document.querySelectorAll('.overlay');
+        overlays.forEach(el => el.classList.add('hidden'));
+        gameMain.classList.remove('hidden');
+
+        // Oyuncu listesini odadaki tüm oyunculardan oluştur
+        const roomPlayers = Object.values(room.players || {});
+        players = roomPlayers.map((p, index) => ({
+            id: index + 1,                 // basit sıra numarası
+            name: p.name,
+            totalStrokes: 0,
+            totalScore: 0,
+            mapScores: {},
+            isMe: p.uid === myUid
+        }));
+
+        // Kendi adını bul ve ekrana yaz
+        const me = players.find(p => p.isMe) || players[0];
+        if (!myPlayerId) myPlayerId = me ? me.id : generatePlayerId();
+        displayName.textContent = me ? `${me.name} #${myPlayerId}` : `Oyuncu #${myPlayerId}`;
+        statusEl.textContent = 'Hazır';
+
+        renderPlayerList();
+
+        // Skorları sıfırla
+        scoreHistory = [];
+        currentStrokes = 0;
+        updateScorecardUI();
+
+        // Oyunu başlat
+        drawInitialScene();
+    };
 
 	// --- OYUN MANTIĞI ---
 	let ball = { x: 100, y: 250, vx: 0, vy: 0, radius: 8 };

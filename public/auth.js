@@ -206,12 +206,17 @@ function initAuth() {
         });
 
         // Oyun Başladı
-        socket.on('gameStarted', () => {
-            console.log("Oyun başlıyor!");
+        socket.on('gameStarted', (room) => {
+            console.log("Oyun başlıyor! Oda:", room.id);
             showScreen(null); // Lobi ekranlarını kapat
             document.getElementById('game').classList.remove('hidden');
-            // Multiplayer modunda başlat
-            if (window.startGameSingle) window.startGameSingle(currentUser.displayName);
+            // Multiplayer modunda başlat (tüm oyuncu listesini oyun tarafına gönder)
+            if (window.startGameMultiplayer) {
+                window.startGameMultiplayer(room, currentUser.uid);
+            } else if (window.startGameSingle) {
+                // Yedek: Eski tek oyunculu başlatıcı
+                window.startGameSingle(currentUser.displayName);
+            }
         });
     }
 

@@ -21,6 +21,11 @@ const io = new Server(server, {
 // --- OYUN SUNUCUSU BELLEĞİ ---
 const rooms = {};
 
+// Aynı Firebase kullanıcısının (uid) aynı anda sadece tek socket ile bağlı kalması için
+// uid -> socket.id ve socket.id -> uid map'leri tutuyoruz
+const uidToSocket = {};
+const socketToUid = {};
+
 // --- YARDIMCI FONKSİYONLAR ---
 function generateRoomId() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -32,6 +37,22 @@ function generateRoomId() {
     return result;
 }
 
+function registerPlayerSocket(uid, socket) {
+    const existingSocketId = uidToSocket[uid];
+    if (existingSocketId && existingSocketId !== socket.id) {
+        // Eski socket'i düşür (başka sekme/cihaz)
+        const oldSocket = io.sockets.sockets.get(existingSocketId);
+        if (oldSocket) {
+            oldSocket.emit('forceLogout', 'Bu hesap başka bir cihazdan açıldı. Oturum sonlandırıldı.');
+            // Eski socket'i temizle
+            handleDisconnect(oldSocket);
+            oldSocket.disconnect(true);
+        }
+    }
+    uidToSocket[uid] = socket.id;
+    socketToUid[socket.id] = uid;
+}
+
 io.on('connection', (socket) => {
     // Buradaki log sadece teknik bağlantıyı gösterir
     // console.log('Biri bağlandı: ' + socket.id);
@@ -39,6 +60,9 @@ io.on('connection', (socket) => {
     // 1. ODA KURMA
     socket.on('createRoom', ({ uid, name, isPublic }) => {
         const roomId = generateRoomId();
+
+        // Bu uid için aktif socket'i kaydet (eski bağlantı varsa düşürülür)
+        registerPlayerSocket(uid, socket);
         
         rooms[roomId] = {
             id: roomId,
@@ -79,6 +103,9 @@ io.on('connection', (socket) => {
             return;
         }
 
+        // Bu uid için aktif socket'i kaydet (eski bağlantı varsa düşürülür)
+        registerPlayerSocket(uid, socket);
+
         room.players[socket.id] = {
             uid: uid,
             name: name,
@@ -104,6 +131,10 @@ io.on('connection', (socket) => {
 
         if (availableRoomId) {
             const room = rooms[availableRoomId];
+
+            // Bu uid için aktif socket'i kaydet (eski bağlantı varsa düşürülür)
+            registerPlayerSocket(uid, socket);
+
             room.players[socket.id] = { uid, name, score: 0, ready: false, x: 0, y: 0 };
             socket.join(availableRoomId);
             io.to(availableRoomId).emit('roomUpdated', room);         // herkese güncelle
@@ -129,7 +160,7 @@ io.on('connection', (socket) => {
         const room = rooms[roomId];
         if(room && room.host === socket.id) {
             room.status = 'playing';
-            io.to(roomId).emit('gameStarted');
+            io.to(roomId).emit('gameStarted', room); // tüm oyunculara oda bilgisiyle birlikte gönder
             console.log(`[OYUN BAŞLADI] Oda: ${roomId}`);
         }
     });
@@ -170,6 +201,15 @@ io.on('connection', (socket) => {
                     console.log(`[YENİ HOST] Oda: ${roomId}, Yeni Host: ${newHostName}`);
                 }
                 io.to(roomId).emit('roomUpdated', room);
+            }
+        }
+
+        // Socket-UID eşleşmelerini temizle
+        const uid = socketToUid[socket.id];
+        if (uid) {
+            delete socketToUid[socket.id];
+            if (uidToSocket[uid] === socket.id) {
+                delete uidToSocket[uid];
             }
         }
     }
