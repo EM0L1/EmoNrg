@@ -25,23 +25,58 @@ document.addEventListener('DOMContentLoaded', () => {
 	const canvas = document.getElementById('game-canvas');
 	const ctx = canvas.getContext('2d');
 	const loadingScreen = document.getElementById('loading-screen');
+	const loadingTitle = document.getElementById('loading-title');
+	const loadingText = document.getElementById('loading-text');
+	const holeScoreInfo = document.getElementById('hole-score-info');
 	const playerListEl = document.getElementById('player-list');
+
+	// Scorecard Elements
+	const scorecardOverlay = document.getElementById('scorecard-overlay');
+	const scorecardHead = document.getElementById('scorecard-head');
+	const scorecardBody = document.getElementById('scorecard-body');
+	const btnCloseScorecard = document.getElementById('btn-close-scorecard');
+	const btnRestartGame = document.getElementById('btn-restart-game');
+	const roundResultTitle = document.getElementById('round-result-title');
+	const roundResultPoints = document.getElementById('round-result-points');
+	const roundResultArea = document.getElementById('round-result-area');
+
+	// UI Elements
+	const mapInfoEl = document.getElementById('map-info');
+	const parInfoEl = document.getElementById('par-info');
+	const strokeInfoEl = document.getElementById('stroke-info');
+
+	// Power Bar Elements
+	const powerContainer = document.getElementById('power-container');
+	const powerBarFill = document.getElementById('power-bar-fill');
 
 	// Oyuncu Bilgisi
 	let myPlayerId = null;
+	let players = []; // { id, name, totalStrokes, totalScore, mapScores: {}, isMe }
+
+	// Skor Değişkenleri
+	let currentStrokes = 0;
+	let scoreHistory = []; // { mapId, par, strokes, score }
 
 	function generatePlayerId() {
 		return Math.floor(1000 + Math.random() * 9000); // 1000-9999 arası
 	}
 
-	function updatePlayerList(name, id) {
-		// Şimdilik sadece kendimizi ekliyoruz
-		playerListEl.innerHTML = `
-			<li>
-				<span class="p-name">${name} (Sen)</span>
-				<span class="p-id">#${id}</span>
-			</li>
-		`;
+	function renderPlayerList() {
+		// Puana göre sırala (Çok puan yapan önde)
+		players.sort((a, b) => b.totalScore - a.totalScore);
+
+		playerListEl.innerHTML = '';
+		players.forEach(p => {
+			const li = document.createElement('li');
+			li.innerHTML = `
+				<span class="p-name">${p.name} ${p.isMe ? '(Sen)' : ''}</span>
+				<div style="display:flex; align-items:center; gap:10px;">
+					<span class="p-score" style="font-weight:bold; color:#2563eb;">${p.totalScore} P</span>
+					<span class="p-id">#${p.id}</span>
+				</div>
+			`;
+			playerListEl.appendChild(li);
+		});
 	}
 
 	function showNameArea() {
@@ -64,7 +99,21 @@ document.addEventListener('DOMContentLoaded', () => {
 		displayName.textContent = `${name} #${myPlayerId}`;
 		statusEl.textContent = 'Hazır';
 		
-		updatePlayerList(name, myPlayerId);
+		// Oyuncuyu başlat
+		players = [{
+			id: myPlayerId,
+			name: name,
+			totalStrokes: 0,
+			totalScore: 0,
+			mapScores: {},
+			isMe: true
+		}];
+		renderPlayerList();
+
+		// Skorları sıfırla
+		scoreHistory = [];
+		currentStrokes = 0;
+		updateScorecardUI();
 
 		// Basit başlangıç çizimi
 		drawInitialScene();
@@ -176,10 +225,15 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 	function loadMap(index) {
+		isLevelTransitioning = false; // Yeni harita yüklendiğinde geçiş modundan çık
+		isDragging = false; // Sürüklemeyi iptal et
+		powerContainer.classList.add('hidden'); // Güç barını gizle
+		
 		if (index >= GAME_MAPS.length) {
-			statusEl.textContent = "Tüm haritalar tamamlandı! Tebrikler!";
-			// Başa dön veya bitir
-			index = 0;
+			// Oyun bitti, scorecard göster
+			currentMap = null; // Haritayı temizle
+			showScorecard(true);
+			return;
 		}
 		currentMapIndex = index;
 		currentMap = GAME_MAPS[currentMapIndex];
@@ -193,8 +247,98 @@ document.addEventListener('DOMContentLoaded', () => {
 		hole.x = currentMap.hole.x;
 		hole.y = currentMap.hole.y;
 		
+		// Skor sıfırla
+		currentStrokes = 0;
+		updateGameUI();
+		
 		statusEl.textContent = `Harita ${currentMap.id} / ${GAME_MAPS.length}`;
 	}
+
+	function updateGameUI() {
+		if(!currentMap) return;
+		mapInfoEl.textContent = currentMap.id;
+		parInfoEl.textContent = currentMap.par;
+		strokeInfoEl.textContent = currentStrokes;
+	}
+
+	function getScoreTerm(strokes, par) {
+		const diff = strokes - par;
+		if (strokes === 1) return "Hole-in-One!";
+		if (diff <= -3) return "Albatross!";
+		if (diff === -2) return "Eagle!";
+		if (diff === -1) return "Birdie!";
+		if (diff === 0) return "Par";
+		if (diff === 1) return "Bogey";
+		if (diff === 2) return "Double Bogey";
+		if (diff === 3) return "Triple Bogey";
+		return `+${diff}`;
+	}
+
+	function updateScorecardUI() {
+		// Header Oluştur
+		let headerHtml = '<tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0;">';
+		headerHtml += '<th style="padding: 10px; text-align: left;">Oyuncu</th>';
+		
+		GAME_MAPS.forEach(map => {
+			headerHtml += `<th style="padding: 10px; text-align: center;">H${map.id}</th>`;
+		});
+		
+		headerHtml += '<th style="padding: 10px; text-align: center;">Toplam</th></tr>';
+		scorecardHead.innerHTML = headerHtml;
+
+		// Body Oluştur
+		scorecardBody.innerHTML = '';
+		
+		// Oyuncuları puana göre sırala
+		const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
+
+		sortedPlayers.forEach(p => {
+			let rowHtml = `<tr style="border-bottom: 1px solid #e2e8f0;">`;
+			rowHtml += `<td style="padding: 10px; font-weight:600;">${p.name} ${p.isMe ? '(Sen)' : ''}</td>`;
+			
+			GAME_MAPS.forEach(map => {
+				const score = (p.mapScores && p.mapScores[map.id] !== undefined) ? p.mapScores[map.id] : '-';
+				rowHtml += `<td style="padding: 10px; text-align: center;">${score}</td>`;
+			});
+			
+			rowHtml += `<td style="padding: 10px; text-align: center; font-weight: bold; color: #2563eb;">${p.totalScore}</td>`;
+			rowHtml += `</tr>`;
+			scorecardBody.innerHTML += rowHtml;
+		});
+	}
+
+	function showScorecard(isGameOver = false, roundInfo = null) {
+		updateScorecardUI();
+		scorecardOverlay.classList.remove('hidden');
+		
+		if (roundInfo) {
+			roundResultArea.classList.remove('hidden');
+			roundResultTitle.textContent = roundInfo.term;
+			roundResultPoints.textContent = `${roundInfo.points > 0 ? '+' : ''}${roundInfo.points} Puan`;
+		} else {
+			roundResultArea.classList.add('hidden');
+		}
+
+		if (isGameOver) {
+			btnRestartGame.classList.remove('hidden');
+			btnCloseScorecard.classList.add('hidden');
+		} else {
+			btnRestartGame.classList.add('hidden');
+			btnCloseScorecard.classList.remove('hidden');
+		}
+	}
+
+	btnCloseScorecard.addEventListener('click', () => {
+		scorecardOverlay.classList.add('hidden');
+		loadMap(currentMapIndex + 1);
+	});
+
+	btnRestartGame.addEventListener('click', () => {
+		scorecardOverlay.classList.add('hidden');
+		gameMain.classList.add('hidden');
+		startArea.classList.remove('hidden');
+		lobby.classList.remove('hidden');
+	});
 
 	// Oyun döngüsünü başlat
 	function drawInitialScene() {
@@ -203,6 +347,15 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function update() {
+		if (isLevelTransitioning) {
+			// Topu deliğin içinde tut
+			ball.x = hole.x;
+			ball.y = hole.y;
+			ball.vx = 0;
+			ball.vy = 0;
+			return;
+		}
+
 		// Sub-stepping (Fizik adımları)
 		// Hızlı hareket eden topun duvarların içinden geçmesini (tunneling) önlemek için
 		// hareketi küçük parçalara bölüyoruz.
@@ -288,20 +441,62 @@ document.addEventListener('DOMContentLoaded', () => {
 		const dy = ball.y - hole.y;
 		const dist = Math.sqrt(dx*dx + dy*dy);
 		
-		if (!isLevelTransitioning && dist < (hole.radius + ball.radius * 0.5) && Math.abs(ball.vx) < 5 && Math.abs(ball.vy) < 5) {
+		if (!isLevelTransitioning && dist < (hole.radius + ball.radius * 0.5) && Math.abs(ball.vx) < 15 && Math.abs(ball.vy) < 15) {
 			isLevelTransitioning = true;
-			statusEl.textContent = "Tebrikler! Sonraki haritaya geçiliyor...";
+			
+			// Puan Hesaplama
+			const par = currentMap.par;
+			let points = 0;
+			
+			// Vuruş bazlı puan (1->5, 2->4, 3->3, 4->2, 5->1, >5->0)
+			if (currentStrokes === 1) points += 5;
+			else if (currentStrokes === 2) points += 4;
+			else if (currentStrokes === 3) points += 3;
+			else if (currentStrokes === 4) points += 2;
+			else if (currentStrokes === 5) points += 1;
+			
+			// Par bonusu
+			if (currentStrokes < par) points += 3;
+			else if (currentStrokes === par) points += 2;
+
+			const term = getScoreTerm(currentStrokes, par);
+			
+			scoreHistory.push({
+				mapId: currentMap.id,
+				par: par,
+				strokes: currentStrokes,
+				score: points
+			});
+
+			// Oyuncu puanını güncelle
+			const me = players.find(p => p.isMe);
+			if(me) {
+				me.totalScore += points;
+				if(!me.mapScores) me.mapScores = {};
+				me.mapScores[currentMap.id] = points;
+			}
+			renderPlayerList();
+
+			statusEl.textContent = `${term}! Sonraki haritaya geçiliyor...`;
 			ball.vx = 0; 
 			ball.vy = 0;
 			ball.x = hole.x;
 			ball.y = hole.y;
 			
-			loadingScreen.classList.remove('hidden');
+			// Loading ekranını güncelle (Artık Scorecard kullanacağız ama loading screen'i kısa bir efekt için tutabiliriz veya direkt scorecard açabiliriz)
+			// Kullanıcı deneyimi: Top deliğe girer -> "Birdie!" yazar -> 1 sn sonra Skor Tablosu açılır -> "Devam Et" ile sonraki harita.
+			
+			statusEl.textContent = `${term}!`;
+			
+			// Topu deliğe sabitle
+			ball.vx = 0;
+			ball.vy = 0;
+			ball.x = hole.x;
+			ball.y = hole.y;
+
 			setTimeout(() => {
-				loadMap(currentMapIndex + 1);
-				loadingScreen.classList.add('hidden');
-				isLevelTransitioning = false;
-			}, 2000);
+				showScorecard(false, { term: term, points: points }); // false = oyun bitmedi, devam et butonu göster
+			}, 1000);
 		}
 	}
 
@@ -352,15 +547,17 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 
 		// Top
-		ctx.beginPath();
-		ctx.fillStyle = '#ffffff';
-		ctx.shadowColor = 'rgba(0,0,0,0.2)';
-		ctx.shadowBlur = 4;
-		ctx.shadowOffsetY = 2;
-		ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
-		ctx.fill();
-		ctx.shadowColor = 'transparent'; // reset shadow
-		ctx.closePath();
+		if (!isLevelTransitioning) {
+			ctx.beginPath();
+			ctx.fillStyle = '#ffffff';
+			ctx.shadowColor = 'rgba(0,0,0,0.2)';
+			ctx.shadowBlur = 4;
+			ctx.shadowOffsetY = 2;
+			ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
+			ctx.fill();
+			ctx.shadowColor = 'transparent'; // reset shadow
+			ctx.closePath();
+		}
 	}
 
 	function drawArrow() {
@@ -377,49 +574,41 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Açıyı hesapla
 		const angle = Math.atan2(dy, dx);
 
-		// Güç seviyesi (1-5 arası)
-		// dist 0..MAX_DRAG_DIST -> level 0..5
-		const level = Math.ceil((dist / MAX_DRAG_DIST) * 5);
+		// Görsel uzunluk kısıtlaması (Kullanıcı isteği: çok uzun olmasın)
+		const MAX_VISUAL_LENGTH = 80;
+		const arrowLength = Math.min(dist, MAX_VISUAL_LENGTH);
 		
-		// Ok uzunluğu (görsel olarak biraz daha uzun görünsün diye scale edebiliriz veya dist kullanabiliriz)
-		const arrowLength = dist; 
+		// Ok başlangıç ofseti (Topun içinden çıkmasın)
+		const startOffset = ball.radius + 5;
 
 		// Ok çizimi
 		ctx.save();
 		ctx.translate(ball.x, ball.y);
 		ctx.rotate(angle);
 
-		// Ok gövdesi (Kademeli renk veya parça parça)
-		// 5 parça çizelim, aktif olanlar dolu, olmayanlar boş veya silik
-		const segmentLen = MAX_DRAG_DIST / 5;
+		// Tek parça ok gövdesi
+		ctx.beginPath();
+		ctx.fillStyle = '#ffffff'; // Beyaz ok
+		ctx.strokeStyle = '#333';
+		ctx.lineWidth = 1;
 		
-		for (let i = 1; i <= 5; i++) {
-			ctx.beginPath();
-			// Her segment biraz boşluklu olsun
-			const startX = (i - 1) * (segmentLen) + 5; 
-			const endX = i * segmentLen - 2;
-			
-			if (startX > arrowLength) break; // Sadece çekilen kadarını çiz
+		// Gövde (startOffset'ten başla)
+		ctx.rect(startOffset, -3, arrowLength, 6);
+		ctx.fill();
+		ctx.stroke();
+		ctx.closePath();
 
-			// Renk: Güç arttıkça yeşilden kırmızıya
-			if (i <= 2) ctx.fillStyle = '#4ade80'; // Yeşil
-			else if (i <= 4) ctx.fillStyle = '#facc15'; // Sarı
-			else ctx.fillStyle = '#ef4444'; // Kırmızı
-
-			// Ok gövdesi dikdörtgen
-			ctx.rect(startX, -3, (endX - startX), 6);
-			ctx.fill();
-			ctx.closePath();
-		}
-
-		// Ok ucu (Sadece en sonda çizilsin)
+		// Ok ucu
 		if (dist > 10) {
 			ctx.beginPath();
-			ctx.fillStyle = (level >= 5) ? '#ef4444' : (level >= 3 ? '#facc15' : '#4ade80');
-			ctx.moveTo(arrowLength, 0);
-			ctx.lineTo(arrowLength - 10, -6);
-			ctx.lineTo(arrowLength - 10, 6);
+			ctx.fillStyle = '#ffffff';
+			// Uç kısmı gövdenin bittiği yere ekle
+			const tipX = startOffset + arrowLength;
+			ctx.moveTo(tipX, 0);
+			ctx.lineTo(tipX - 10, -6);
+			ctx.lineTo(tipX - 10, 6);
 			ctx.fill();
+			ctx.stroke();
 			ctx.closePath();
 		}
 
@@ -449,17 +638,29 @@ document.addEventListener('DOMContentLoaded', () => {
 			isDragging = true;
 			dragStart = { x: ball.x, y: ball.y }; // Topun merkezi referans
 			currentMouse = pos;
+			powerContainer.classList.remove('hidden');
 		}
 	}
 
 	function onMouseMove(e) {
 		if (!isDragging) return;
 		currentMouse = getMousePos(e);
+		
+		// Power Bar Güncelleme
+		const dx = ball.x - currentMouse.x;
+		const dy = ball.y - currentMouse.y;
+		let dist = Math.sqrt(dx*dx + dy*dy);
+		if (dist > MAX_DRAG_DIST) dist = MAX_DRAG_DIST;
+		
+		const percent = (dist / MAX_DRAG_DIST) * 100;
+		powerBarFill.style.width = `${percent}%`;
 	}
 
 	function onMouseUp(e) {
 		if (!isDragging) return;
 		isDragging = false;
+		powerContainer.classList.add('hidden');
+		powerBarFill.style.width = '0%';
 
 		// Fırlatma vektörü hesapla
 		const dx = ball.x - currentMouse.x;
@@ -476,6 +677,17 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		ball.vx = Math.cos(angle) * power;
 		ball.vy = Math.sin(angle) * power;
+		
+		currentStrokes++;
+		
+		// Toplam vuruşu güncelle (İstatistik için)
+		const me = players.find(p => p.isMe);
+		if(me) {
+			me.totalStrokes++;
+		}
+		// Puanı burada güncellemiyoruz, delik tamamlanınca güncellenecek.
+		
+		updateGameUI();
 		
 		statusEl.textContent = "Atış yapıldı!";
 	}

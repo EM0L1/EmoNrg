@@ -2,6 +2,7 @@ const GAME_MAPS = [
   // Level 1: "S" Virajı - Isınma ama dikkatli ol
   {
     id: 1,
+    par: 3,
     start: { x: 50, y: 450 },
     hole: { x: 750, y: 50 },
     walls: [
@@ -12,6 +13,7 @@ const GAME_MAPS = [
   // Level 2: Mayın Tarlası - Aralardan geç
   {
     id: 2,
+    par: 4,
     start: { x: 50, y: 250 },
     hole: { x: 750, y: 250 },
     walls: [
@@ -27,6 +29,7 @@ const GAME_MAPS = [
   // Level 3: Dar Köprü - Hassas vuruş gerekir
   {
     id: 3,
+    par: 3,
     start: { x: 80, y: 250 },
     hole: { x: 720, y: 250 },
     walls: [
@@ -38,6 +41,7 @@ const GAME_MAPS = [
   // Level 4: Labirent - Uzun yol
   {
     id: 4,
+    par: 5,
     start: { x: 50, y: 50 },
     hole: { x: 750, y: 450 },
     walls: [
@@ -50,6 +54,7 @@ const GAME_MAPS = [
   // Level 5: Kale - İçeri girmek zor
   {
     id: 5,
+    par: 4,
     start: { x: 400, y: 450 },
     hole: { x: 400, y: 250 },
     walls: [
