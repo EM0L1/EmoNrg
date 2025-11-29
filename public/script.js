@@ -192,12 +192,16 @@ document.addEventListener('DOMContentLoaded', () => {
         loadMap(currentMapIndex + 1);
     };
 
-    // Tüm oyuncular deliği bitirdiğinde "Hazırım" butonunu aktifleştir
+    // Tüm oyuncular deliği bitirdiğinde skor ekranını aç ve "Hazırım" butonunu aktifleştir
     window.enableNextHoleButton = function(room) {
         if (!isMultiplayer) return;
         syncPlayersFromRoom(room);
         renderPlayerList();
         updateScorecardUI();
+        // Eğer skor kartı henüz açılmadıysa şimdi aç
+        if (scorecardOverlay && scorecardOverlay.classList.contains('hidden')) {
+            showScorecard(false, null);
+        }
         if (btnCloseScorecard) {
             btnCloseScorecard.disabled = false;
             btnCloseScorecard.textContent = 'Sonraki deliğe hazırım';
@@ -424,9 +428,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnCloseScorecard.textContent = 'Devam Et';
                 btnCloseScorecard.classList.remove('hidden');
             } else {
-                // Çok oyunculu: diğer oyuncular bitirene kadar bekle
-                btnCloseScorecard.disabled = true;
-                btnCloseScorecard.textContent = 'Diğer oyuncular bekleniyor...';
+                // Çok oyunculu: her oyuncu kendi deliğini bitirir bitirmez "Hazırım" tuşuna basabilir.
+                // Sunucu, herkes finishedCurrentHole + readyForNextHole olmadan sonraki deliğe geçirmez.
+                btnCloseScorecard.disabled = false;
+                btnCloseScorecard.textContent = 'Sonraki deliğe hazırım (diğer oyuncular bekleniyor...)';
                 btnCloseScorecard.classList.remove('hidden');
             }
 		}
@@ -582,9 +587,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				setTimeout(() => {
 					showScorecard(false, { term: term, points: points }); 
 				}, 300);
-			} else {
-				// Çok oyunculu: hemen skor kartını göster, ilerlemeyi sunucu yönetecek
-				showScorecard(false, { term: term, points: points });
 			}
 		}
 	}
@@ -613,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const h = canvas.height;
 		ctx.clearRect(0, 0, w, h);
 
-		if (isLevelTransitioning) {
+		if (isLevelTransitioning && !isMultiplayer) {
 			return;
 		}
 
