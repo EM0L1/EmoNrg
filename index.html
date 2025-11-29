@@ -8,6 +8,7 @@
 </head>
 <body>
 
+	<!-- 1. GİRİŞ EKRANI -->
 	<div id="auth-screen" class="overlay">
 		<div class="card">
 			<h1 id="auth-title">Giriş Yap</h1>
@@ -26,40 +27,76 @@
 		</div>
 	</div>
 
-	<div id="lobby" class="overlay hidden">
+	<!-- 2. ANA MENÜ (Lobi Seçimi) -->
+	<div id="lobby-menu" class="overlay hidden">
 		<div class="card">
 			<h1>EmoNrg Mini Golf</h1>
+			<h3 id="welcome-msg"></h3>
+			
+			<div class="menu-buttons">
+				<button id="btn-singleplayer" class="btn primary large" style="background: #059669; border-color: #059669;">Tek Oyunculu</button>
+				<button id="btn-show-create" class="btn primary large" style="margin-top: 10px;">Oda Kur</button>
+				<button id="btn-show-join" class="btn large" style="margin-top: 10px;">Koduyla Katıl</button>
+				<button id="btn-join-random" class="btn large" style="margin-top: 10px; background: #f59e0b; color: white; border: none;">Rastgele Odaya Katıl</button>
+				<button id="btn-settings" class="btn large" style="margin-top: 10px;">Ayarlar</button>
+				<button id="btn-logout" class="btn" style="margin-top: 20px; border-color: #ef4444; color: #ef4444;">Çıkış Yap</button>
+			</div>
+		</div>
+	</div>
 
-			<div id="start-area">
-				<p>Sıra tabanlı online mini golf oyununa hoş geldiniz.</p>
-				<div class="menu-buttons">
-					<button id="btn-single" class="btn primary large">TEK OYUNCULU</button>
-					<button id="btn-multi" class="btn large" style="margin-top: 10px;">ÇOK OYUNCULU</button>
-					<button id="btn-settings" class="btn large" style="margin-top: 10px;">AYARLAR</button>
-				</div>
+	<!-- 3. ODA KURMA MODALI -->
+	<div id="create-room-modal" class="overlay hidden" style="background: rgba(0,0,0,0.8);">
+		<div class="card">
+			<h2>Oda Ayarları</h2>
+			
+			<div style="margin: 20px 0; text-align: left;">
+				<label class="switch-container">
+					<span>Herkese Açık (Rastgele eşleşme)</span>
+					<input id="room-public-switch" type="checkbox" checked>
+					<span class="checkmark"></span>
+				</label>
 			</div>
 
-			<div id="multiplayer-area" class="hidden">
-				<h3>Çok Oyunculu</h3>
-				<p>Bu mod henüz yapım aşamasında.</p>
-				<button id="btn-back-multi" class="btn">Geri Dön</button>
+			<div class="row">
+				<button id="btn-create-confirm" class="btn primary">Oluştur</button>
+				<button id="btn-create-cancel" class="btn">İptal</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- 4. ODAYA KATIL MODALI -->
+	<div id="join-room-modal" class="overlay hidden" style="background: rgba(0,0,0,0.8);">
+		<div class="card">
+			<h2>Oda Kodu Girin</h2>
+			<input id="room-code-input" type="text" placeholder="6 Haneli Kod" maxlength="6" style="text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 24px;" />
+			<p id="join-error" class="error hidden"></p>
+			<div class="row">
+				<button id="btn-join-confirm" class="btn primary">Katıl</button>
+				<button id="btn-join-cancel" class="btn">İptal</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- 5. ODA İÇİ BEKLEME EKRANI -->
+	<div id="room-lobby" class="overlay hidden">
+		<div class="card" style="max-width: 600px;">
+			<div class="room-header">
+				<h2>Oda Kodu: <span id="display-room-code" style="font-family: monospace; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; color: #2563eb;">------</span></h2>
+				<button id="btn-leave-room" class="btn small" style="background: #ef4444; color: white; border: none;">Ayrıl</button>
+			</div>
+			
+			<div class="player-slots">
+				<h3>Oyuncular (<span id="player-count">1</span>/6)</h3>
+				<p style="font-size: 12px; color: #64748b;">Oyunun başlaması için en az 4 kişi gerekli.</p>
+				
+				<ul id="room-player-list" class="player-list-grid">
+					<!-- Oyuncular buraya gelecek -->
+				</ul>
 			</div>
 
-			<div id="settings-area" class="hidden">
-				<h3>Ayarlar</h3>
-				<p>Ayarlar menüsü yapım aşamasında.</p>
-				<button id="btn-back-settings" class="btn">Geri Dön</button>
-			</div>
+			<div id="room-status-msg" style="margin: 15px 0; color: #f59e0b; font-weight: bold;">Oyuncular bekleniyor...</div>
 
-			<div id="name-area" class="hidden">
-				<p>Lütfen oyunda kullanmak için bir isim girin.</p>
-				<input id="player-name" type="text" placeholder="İsminizi girin" maxlength="20" />
-				<div class="row">
-					<button id="join-btn" class="btn primary">Katıl</button>
-					<button id="cancel-name" class="btn">Vazgeç</button>
-				</div>
-				<p id="name-error" class="error hidden">Lütfen geçerli bir isim girin.</p>
-			</div>
+			<button id="btn-start-game" class="btn primary large" disabled>Oyunu Başlat</button>
 		</div>
 	</div>
 
@@ -124,6 +161,7 @@
 	<!-- Firebase Compat Scripts (Global Değişkenler için) -->
 	<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 	<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 	
 	<!-- Auth.js artık modül değil, normal script -->
 	<script src="auth.js"></script>
