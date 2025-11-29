@@ -129,6 +129,19 @@ function initAuth() {
                 await auth.signInWithEmailAndPassword(email, password);
             }
             console.log("İşlem tamamlandı.");
+
+            // BAŞARILI DURUM: Kullanıcıyı hemen lobiye al
+            authError.classList.add('hidden');
+            btnAction.disabled = false;
+
+            currentUser = auth.currentUser;
+            if (currentUser) {
+                const welcomeEl = document.getElementById('welcome-msg');
+                if (welcomeEl) {
+                    welcomeEl.textContent = `Merhaba, ${currentUser.displayName || nickname}`;
+                }
+                showScreen('lobbyMenu');
+            }
         } catch (error) {
             console.error("Auth Hatası:", error);
             let msg = error.message;
