@@ -32,7 +32,34 @@
 		<div class="card">
 			<h1>EmoNrg Mini Golf</h1>
 			<h3 id="welcome-msg"></h3>
-			
+			<div id="color-picker" style="margin: 10px 0 20px; text-align: left;">
+				<p style="margin: 0 0 6px; font-size: 14px; color: #334155;">Top Rengini Seç:</p>
+				<div class="color-options">
+					<button class="color-option" data-color="red" title="Kırmızı"></button>
+					<button class="color-option" data-color="blue" title="Mavi"></button>
+					<button class="color-option" data-color="purple" title="Mor"></button>
+					<button class="color-option" data-color="green" title="Yeşil"></button>
+					<button class="color-option" data-color="yellow" title="Sarı"></button>
+					<button class="color-option" data-color="white" title="Beyaz"></button>
+					<button class="color-option" data-color="pink" title="Pembe"></button>
+					<button class="color-option" data-color="turquoise" title="Turkuaz"></button>
+				</div>
+				<p id="color-error" class="error hidden" style="margin-top: 6px;"></p>
+			</div>
+			<div id="color-picker" style="margin: 10px 0 20px; text-align: left;">
+				<p style="margin: 0 0 6px; font-size: 14px; color: #334155;">Top Rengini Seç:</p>
+				<div class="color-options">
+					<button class="color-option" data-color="red" title="Kırmızı"></button>
+					<button class="color-option" data-color="blue" title="Mavi"></button>
+					<button class="color-option" data-color="purple" title="Mor"></button>
+					<button class="color-option" data-color="green" title="Yeşil"></button>
+					<button class="color-option" data-color="yellow" title="Sarı"></button>
+					<button class="color-option" data-color="white" title="Beyaz"></button>
+					<button class="color-option" data-color="pink" title="Pembe"></button>
+					<button class="color-option" data-color="turquoise" title="Turkuaz"></button>
+				</div>
+				<p id="color-error" class="error hidden" style="margin-top: 6px;"></p>
+			</div>
 			<div class="menu-buttons">
 				<button id="btn-singleplayer" class="btn primary large" style="background: #059669; border-color: #059669;">Tek Oyunculu</button>
 				<button id="btn-show-create" class="btn primary large" style="margin-top: 10px;">Oda Kur</button>
@@ -146,6 +173,11 @@
 		<div id="power-container" class="hidden">
 			<div class="power-bar-bg">
 				<div id="power-bar-fill"></div>
+			</div>
+			<div class="power-controls">
+				<span class="power-label">Güç</span>
+				<div id="power-touch-area"></div>
+				<button id="shoot-btn" class="btn primary small">Vur</button>
 			</div>
 		</div>
       </div>

@@ -34,15 +34,21 @@ document.addEventListener('DOMContentLoaded', () => {
 	const mapInfoEl = document.getElementById('map-info');
 	const parInfoEl = document.getElementById('par-info');
 	const strokeInfoEl = document.getElementById('stroke-info');
+	const colorErrorEl = document.getElementById('color-error');
+	const colorOptionButtons = document.querySelectorAll('.color-option');
 
 	// Power Bar Elements
 	const powerContainer = document.getElementById('power-container');
 	const powerBarFill = document.getElementById('power-bar-fill');
+	const powerTouchArea = document.getElementById('power-touch-area');
+	const shootBtn = document.getElementById('shoot-btn');
 	const playerListEl = document.getElementById('player-list');
 
 	// Oyuncu Bilgisi
 	let myPlayerId = null;
 	let players = [];  // { id, name, uid?, totalStrokes, totalScore, mapScores: {}, isMe }
+	let myBallColor = 'white';
+	let takenColors = new Set();
     let isMultiplayer = false;
     let myUid = null;
 
@@ -58,6 +64,25 @@ document.addEventListener('DOMContentLoaded', () => {
 	function generatePlayerId() {
 		return Math.floor(1000 + Math.random() * 9000);
 	}
+
+	// Lobi renk seçimi (şimdilik tek cihaz için)
+	colorOptionButtons.forEach(btn => {
+		btn.addEventListener('click', () => {
+			const color = btn.getAttribute('data-color');
+			if (takenColors.has(color) && color !== myBallColor) {
+				if (colorErrorEl) {
+					colorErrorEl.textContent = 'Bu renk başka bir oyuncu tarafından seçildi.';
+					colorErrorEl.classList.remove('hidden');
+				}
+				return;
+			}
+			if (colorErrorEl) colorErrorEl.classList.add('hidden');
+			myBallColor = color;
+			takenColors.add(color);
+			colorOptionButtons.forEach(b => b.classList.remove('selected'));
+			btn.classList.add('selected');
+		});
+	});
 
 	function renderPlayerList() {
 		if(!playerListEl) return;
@@ -96,7 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			totalStrokes: 0,
 			totalScore: 0,
 			mapScores: {},
-			isMe: true
+			isMe: true,
+			color: myBallColor
 		}];
 		renderPlayerList();
 
@@ -187,13 +213,16 @@ document.addEventListener('DOMContentLoaded', () => {
 	let isDragging = false;
 	let dragStart = { x: 0, y: 0 };
 	let currentMouse = { x: 0, y: 0 };
+	let aimAngle = null;
+	let powerPercent = 0;
+	let isAdjustingPower = false;
 	
 	const FRICTION = 0.98;
 	const MAX_POWER = 28;
 	const MAX_DRAG_DIST = 180; 
 	const STOP_THRESHOLD = 0.08;
 
-	// Canvas event listener'ları
+	// Canvas event listener'ları - sadece yön belirlemek için
 	canvas.addEventListener('mousedown', onMouseDown);
 	window.addEventListener('mousemove', onMouseMove);
 	window.addEventListener('mouseup', onMouseUp);
@@ -213,6 +242,73 @@ document.addEventListener('DOMContentLoaded', () => {
 	window.addEventListener('touchend', (e) => {
 		onMouseUp(e);
 	});
+
+	// Güç dokunma alanı: parmakla sürükleyerek powerPercent ayarla
+	function updatePowerFromClientXY(clientX) {
+		const rect = powerTouchArea.getBoundingClientRect();
+		let ratio = (clientX - rect.left) / rect.width;
+		if (ratio < 0) ratio = 0;
+		if (ratio > 1) ratio = 1;
+		powerPercent = ratio * 100;
+		powerTouchArea.style.setProperty('--power-percent', powerPercent + '%');
+	}
+
+	if (powerTouchArea) {
+		powerTouchArea.addEventListener('mousedown', (e) => {
+			isAdjustingPower = true;
+			updatePowerFromClientXY(e.clientX);
+		});
+		window.addEventListener('mousemove', (e) => {
+			if (!isAdjustingPower) return;
+			if (e.buttons !== 1) { isAdjustingPower = false; return; }
+			updatePowerFromClientXY(e.clientX);
+		});
+		window.addEventListener('mouseup', () => {
+			if (!isAdjustingPower) return;
+			isAdjustingPower = false;
+			fireShotIfPossible();
+		});
+		powerTouchArea.addEventListener('touchstart', (e) => {
+			if (e.touches.length > 1) return;
+			e.preventDefault();
+			isAdjustingPower = true;
+			updatePowerFromClientXY(e.touches[0].clientX);
+		}, { passive: false });
+		powerTouchArea.addEventListener('touchmove', (e) => {
+			if (e.touches.length > 1) return;
+			e.preventDefault();
+			updatePowerFromClientXY(e.touches[0].clientX);
+		}, { passive: false });
+		powerTouchArea.addEventListener('touchend', () => {
+			if (!isAdjustingPower) return;
+			isAdjustingPower = false;
+			fireShotIfPossible();
+		});
+	}
+
+	// Güç ayarı bittiğinde ya da butona basıldığında atış fonksiyonu
+	function fireShotIfPossible() {
+		if (aimAngle === null) return;
+		if (Math.abs(ball.vx) > 0.1 || Math.abs(ball.vy) > 0.1) return;
+		const power = (powerPercent / 100) * MAX_POWER;
+		if (power <= 0.5) return;
+		ball.vx = Math.cos(aimAngle) * power;
+		ball.vy = Math.sin(aimAngle) * power;
+		currentStrokes++;
+		const me = players.find(p => p.isMe);
+		if(me) {
+			me.totalStrokes++;
+		}
+		updateGameUI();
+		statusEl.textContent = "Atış yapıldı!";
+	}
+
+	// İstersen butonla da tetikleyebilelim
+	if (shootBtn) {
+		shootBtn.addEventListener('click', () => {
+			fireShotIfPossible();
+		});
+	}
 
 	function loadMap(index) {
 		isLevelTransitioning = false;
@@ -510,7 +606,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		if (!isLevelTransitioning) {
 			ctx.beginPath();
-			ctx.fillStyle = '#ffffff';
+			const me = players.find(p => p.isMe);
+			let fill = '#ffffff';
+			if (me && me.color) {
+				switch (me.color) {
+					case 'red': fill = '#ef4444'; break;
+					case 'blue': fill = '#3b82f6'; break;
+					case 'purple': fill = '#a855f7'; break;
+					case 'green': fill = '#22c55e'; break;
+					case 'yellow': fill = '#facc15'; break;
+					case 'white': fill = '#ffffff'; break;
+					case 'pink': fill = '#ec4899'; break;
+					case 'turquoise': fill = '#14b8a6'; break;
+				}
+			}
+			ctx.fillStyle = fill;
 			ctx.shadowColor = 'rgba(0,0,0,0.2)';
 			ctx.shadowBlur = 4;
 			ctx.shadowOffsetY = 2;
@@ -611,39 +721,15 @@ document.addEventListener('DOMContentLoaded', () => {
 		let dist = Math.sqrt(dx*dx + dy*dy);
 		if (dist > MAX_DRAG_DIST) dist = MAX_DRAG_DIST;
 		
-		const percent = (dist / MAX_DRAG_DIST) * 100;
-		powerBarFill.style.width = `${percent}%`;
+		// Drag sadece yön için: açıyı kaydet
+		aimAngle = Math.atan2(dy, dx);
 	}
 
 	function onMouseUp(e) {
 		if (!isDragging) return;
 		isDragging = false;
-		powerContainer.classList.add('hidden');
-		powerBarFill.style.width = '0%';
-
-		const dx = ball.x - currentMouse.x;
-		const dy = ball.y - currentMouse.y;
-		let dist = Math.sqrt(dx*dx + dy*dy);
-
-		if (dist > MAX_DRAG_DIST) dist = MAX_DRAG_DIST;
-
-		const power = (dist / MAX_DRAG_DIST) * MAX_POWER;
-		
-		const angle = Math.atan2(dy, dx);
-		
-		ball.vx = Math.cos(angle) * power;
-		ball.vy = Math.sin(angle) * power;
-		
-		currentStrokes++;
-		
-		const me = players.find(p => p.isMe);
-		if(me) {
-			me.totalStrokes++;
-		}
-		
-		updateGameUI();
-		
-		statusEl.textContent = "Atış yapıldı!";
+		// Parmağı kaldırınca artık atış yapmıyoruz, sadece yön sabit kalıyor
+		powerContainer.classList.remove('hidden');
 	}
 
 });
