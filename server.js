@@ -95,6 +95,18 @@ io.on('connection', (socket) => {
     // 2. ODAYA KATILMA
     socket.on('joinRoom', ({ roomId, uid, name }) => {
         const room = rooms[roomId];
+        if (!room) {
+            socket.emit('error', 'Oda bulunamadı.');
+            return;
+        }
+        if (Object.keys(room.players).length >= 6) {
+            socket.emit('error', 'Oda dolu.');
+            return;
+        }
+        
+        // Bu uid için aktif socket'i kaydet (eski bağlantı varsa düşürülr)
+        registerPlayerSocket(uid, socket);
+        
         // Mevcut renkleri bul
         const takenColors = new Set(Object.values(room.players).map(p => p.color));
         const allColors = ['red', 'blue', 'purple', 'green', 'yellow', 'white', 'pink', 'turquoise'];
@@ -111,8 +123,8 @@ io.on('connection', (socket) => {
         };
 
         socket.join(roomId);
-        io.to(roomId).emit('roomUpdated', room);   // Odayı herkese güncelle
         socket.emit('joinedRoom', { roomId, room }); // Sadece bu istemciye "sen artık bu odadasın" de
+        io.to(roomId).emit('roomUpdated', room);   // Odayı herkese güncelle
         console.log(`[KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${roomId} (Renk: ${assignedColor})`);
     });
 
@@ -343,11 +355,60 @@ io.on('connection', (socket) => {
                 p.readyForNextHole = false;
             });
             io.to(roomId).emit('roomUpdated', room);
-
-            // Adminlere güncel listeyi at
-            // (Gerçek uygulamada broadcast yapmak daha iyi olurdu)
         }
     });
+
+    socket.on('destroyRoom', (roomId) => {
+        if (!socket.isAdmin) return;
+        const room = rooms[roomId];
+        if (room) {
+            console.log(`[ADMIN LOBİYİ BOZDU] Oda: ${roomId}`);
+            // Tüm oyuncuları lobiye gönder
+            io.to(roomId).emit('roomDestroyed', 'Admin odaya son verdi.');
+            // Odadaki tüm socketleri disconnect et
+            const socketsInRoom = io.sockets.adapter.rooms.get(roomId);
+            if (socketsInRoom) {
+                socketsInRoom.forEach(sid => {
+                    const s = io.sockets.sockets.get(sid);
+                    if (s) {
+                        s.leave(roomId);
+                    }
+                });
+            }
+            // Odayı sil
+            delete rooms[roomId];
+            console.log(`[ODA SİLİNDİ] ${roomId} (Admin tarafından)`);
+        }
+    });
+
+    socket.on('stopSpectate', (roomId) => {
+        if (!socket.isAdmin) return;
+        socket.leave(roomId);
+        console.log(`[ADMIN İZLEMEYE SON VERDİ] Oda: ${roomId}`);
+    });
+
+    // Oyun bittiğinde istatistikleri kaydet
+    async function saveRoomStats(room) {
+        try {
+            for (const [socketId, player] of Object.entries(room.players)) {
+                if (!player.uid) continue;
+                
+                const userRef = db.collection('users').doc(player.uid);
+                const userDoc = await userRef.get();
+                
+                if (userDoc.exists) {
+                    const currentData = userDoc.data();
+                    await userRef.update({
+                        totalScore: (currentData.totalScore || 0) + (player.score || 0),
+                        gamesPlayed: (currentData.gamesPlayed || 0) + 1
+                    });
+                    console.log(`[STATS SAVED] ${player.name}: +${player.score} puan`);
+                }
+            }
+        } catch (error) {
+            console.error("İstatistik kaydetme hatası:", error);
+        }
+    }
 
     function handleDisconnect(socket) {
         const roomId = Object.keys(rooms).find(id => rooms[id].players[socket.id]);

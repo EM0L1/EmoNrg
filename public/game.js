@@ -90,10 +90,12 @@ window.loadMap = function (index) {
 
     if (!window.GAME_MAPS || index >= window.GAME_MAPS.length) {
         window.currentMap = null;
-
-        // İstatistik kaydı artık sunucuda yapılıyor (gameFinished event'i ile)
-
-        if (window.showScorecard) window.showScorecard(true);
+        console.log("Tüm haritalar tamamlandı!");
+        
+        // Oyun bitti - skor kartını göster
+        if (window.showScorecard) {
+            window.showScorecard(true); // true = oyun bitti
+        }
         return;
     }
     window.currentMapIndex = index;
@@ -117,7 +119,9 @@ window.loadMap = function (index) {
 
 window.drawInitialScene = function () {
     window.loadMap(0);
-    requestAnimationFrame(gameLoop);
+    if (!window.gameLoopRunning) {
+        requestAnimationFrame(gameLoop);
+    }
 }
 
 function update() {
@@ -276,8 +280,11 @@ function gameLoop() {
         });
     }
 
+    window.gameLoopRunning = true;
     requestAnimationFrame(gameLoop);
 }
+
+window.gameLoop = gameLoop;
 
 function draw() {
     const w = canvas.width;

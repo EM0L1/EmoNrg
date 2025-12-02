@@ -327,29 +327,31 @@ function initAuth() {
             console.log("Oda oluşturuldu:", data.roomId);
             currentRoomId = data.roomId;
             if (displayRoomCode) displayRoomCode.textContent = data.roomId;
-            showScreen('roomLobby');
-
+            
             if (data.room && data.room.players) {
                 updatePlayerList(Object.values(data.room.players));
             }
+            
+            showScreen('roomLobby');
         });
 
-        socket.on('roomJoined', (data) => {
+        socket.on('joinedRoom', (data) => {
             console.log("Odaya katılındı:", data.roomId);
             currentRoomId = data.roomId;
             if (displayRoomCode) displayRoomCode.textContent = data.roomId;
+            
+            if (data.room && data.room.players) {
+                updatePlayerList(Object.values(data.room.players));
+            }
+            
             showScreen('roomLobby');
-            if (data.players) updatePlayerList(data.players);
         });
 
-        socket.on('playerJoined', (players) => {
-            console.log("Yeni oyuncu katıldı.");
-            updatePlayerList(players);
-        });
-
-        socket.on('playerLeft', (players) => {
-            console.log("Bir oyuncu ayrıldı.");
-            updatePlayerList(players);
+        socket.on('roomUpdated', (room) => {
+            console.log("Oda güncellendi:", room);
+            if (room && room.players) {
+                updatePlayerList(Object.values(room.players));
+            }
         });
 
         socket.on('gameStarted', (room) => {
@@ -361,8 +363,43 @@ function initAuth() {
             }
         });
 
+        // Çok oyunculu game eventleri
+        socket.on('playerMoved', ({ socketId, x, y, vx, vy }) => {
+            if (window.updateRemoteBall) {
+                window.updateRemoteBall(socketId, x, y);
+            }
+        });
+
+        socket.on('holeAllFinished', (room) => {
+            console.log("Tüm oyuncular deliği bitirdi", room);
+            if (window.enableNextHoleButton) {
+                window.enableNextHoleButton(room);
+            }
+        });
+
+        socket.on('advanceHole', (room) => {
+            console.log("Sonraki deliğe geçiliyor", room);
+            if (window.advanceHole) {
+                window.advanceHole(room);
+            }
+        });
+
+        socket.on('gameFinished', (room) => {
+            console.log("Oyun bitti!", room);
+            // Skor kartını göster ve lobiye dönme seçeneği sun
+            if (window.showScorecard) {
+                window.showScorecard(true);
+            }
+        });
+
         socket.on('error', (msg) => {
             alert("Hata: " + msg);
+        });
+
+        socket.on('roomDestroyed', (msg) => {
+            alert(msg || "Oda kapatıldı.");
+            currentRoomId = null;
+            showScreen('lobbyMenu');
         });
 
         socket.on('leaderboardData', (data) => {

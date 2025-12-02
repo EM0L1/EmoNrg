@@ -47,8 +47,15 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
 
 document.getElementById('close-spectator').addEventListener('click', () => {
     spectatorOverlay.classList.add('hidden');
-    // İzlemeyi durdur (sayfayı yenilemek en temizi olabilir ama şimdilik sadece gizle)
-    location.reload(); // Game loop'u temizlemek zor olduğu için reload en güvenlisi
+    // İzlemeyi durdur - odadan ayrıl
+    if (window.currentSpectatingRoomId) {
+        socket.emit('stopSpectate', window.currentSpectatingRoomId);
+        window.currentSpectatingRoomId = null;
+    }
+    // Canvas'ı temizle
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
 // Socket Events
@@ -82,7 +89,7 @@ socket.on('roomList', (rooms) => {
             <td>${room.currentHole || 0}. Harita</td>
             <td>
                 <button class="action-btn btn-watch" onclick="watchRoom('${room.id}')">Canlı İzle</button>
-                <button class="action-btn btn-end" onclick="endGame('${room.id}')">Oyunu Bitir</button>
+                <button class="action-btn btn-end" onclick="endGame('${room.id}')">Lobiyi Boz</button>
             </td>
         `;
         roomsBody.appendChild(tr);
@@ -96,27 +103,17 @@ socket.on('roomList', (rooms) => {
 // Global Functions for Buttons
 window.watchRoom = function (roomId) {
     spectatorOverlay.classList.remove('hidden');
-
+    window.currentSpectatingRoomId = roomId;
+    
     // Game.js'i spectator modunda başlat
-    window.isSpectator = true; // Game.js bunu kontrol edecek
-
-    // Canvas'ı hazırla
-    const canvas = document.getElementById('gameCanvas');
-    // Game.js'deki init fonksiyonlarını çağır (eğer varsa)
-    // Not: Game.js yüklendiğinde otomatik çalışıyorsa, onu durdurup yeniden başlatmak gerekebilir.
-    // Şimdilik basitçe socket eventini gönderelim, game.js zaten yüklü.
+    window.isSpectator = true;
 
     socket.emit('spectateRoom', roomId);
-
-    // Game.js'deki render loop'unun çalıştığından emin ol
-    if (!window.gameLoopRunning && window.gameLoop) {
-        window.gameLoop();
-    }
 };
 
 window.endGame = function (roomId) {
-    if (confirm(`${roomId} odasındaki oyunu bitirmek istediğine emin misin?`)) {
-        socket.emit('forceEndGame', roomId);
+    if (confirm(`${roomId} odasını tamamen kapatmak istediğine emin misin? Tüm oyuncular atılacak.`)) {
+        socket.emit('destroyRoom', roomId);
     }
 };
 

@@ -7,6 +7,8 @@ window.currentRoomIdForGame = null;
 
 // Çok oyunculu başlatıcı: oda bilgisini ve kendi uid'ini alır
 window.startGameMultiplayer = function (room, myUidParam) {
+    console.log("Çok oyunculu oyun başlatılıyor...", room);
+    
     // Overlay'leri kapat
     const overlays = document.querySelectorAll('.overlay');
     overlays.forEach(el => el.classList.add('hidden'));
@@ -41,7 +43,7 @@ window.startGameMultiplayer = function (room, myUidParam) {
         window.uiElements.displayName.textContent = me ? `${me.name} #${window.myPlayerId}` : `Oyuncu #${window.myPlayerId}`;
     }
     if (window.uiElements && window.uiElements.statusEl) {
-        window.uiElements.statusEl.textContent = 'Hazır';
+        window.uiElements.statusEl.textContent = 'Oyun başlatılıyor...';
     }
 
     if (window.renderPlayerList) window.renderPlayerList();
@@ -51,8 +53,17 @@ window.startGameMultiplayer = function (room, myUidParam) {
     window.currentStrokes = 0;
     if (window.updateScorecardUI) window.updateScorecardUI();
 
-    // Oyunu başlat (Game module)
-    if (window.drawInitialScene) window.drawInitialScene();
+    // Haritayı yükle ve oyunu başlat
+    window.currentMapIndex = room.currentHole || 0;
+    if (window.loadMap) {
+        window.loadMap(window.currentMapIndex);
+    }
+    
+    // Game loop'u başlat (eğer çalışmıyorsa)
+    if (!window.gameLoopRunning && window.gameLoop) {
+        window.gameLoopRunning = true;
+        requestAnimationFrame(window.gameLoop);
+    }
 };
 
 // Sunucudan gelen diğer oyuncuların top pozisyonlarını güncelle
