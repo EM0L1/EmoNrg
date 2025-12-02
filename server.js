@@ -412,6 +412,35 @@ io.on('connection', (socket) => {
         console.log(`[ADMIN İZLEMEYE SON VERDİ] Oda: ${roomId}`);
     });
 
+    // Leaderboard isteği
+    socket.on('requestLeaderboard', async (myUid) => {
+        try {
+            console.log('[LEADERBOARD İSTEĞİ] UID:', myUid);
+            
+            const usersSnapshot = await db.collection('users')
+                .orderBy('totalScore', 'desc')
+                .limit(5)
+                .get();
+            
+            const leaderboard = [];
+            usersSnapshot.forEach(doc => {
+                const data = doc.data();
+                leaderboard.push({
+                    uid: doc.id,
+                    displayName: data.displayName || 'Anonim',
+                    totalScore: data.totalScore || 0,
+                    gamesPlayed: data.gamesPlayed || 0
+                });
+            });
+            
+            console.log('[LEADERBOARD GÖNDERME]', leaderboard.length, 'oyuncu');
+            socket.emit('leaderboardData', leaderboard);
+        } catch (error) {
+            console.error('[LEADERBOARD HATASI]', error);
+            socket.emit('leaderboardData', []);
+        }
+    });
+
     // Oyun bittiğinde istatistikleri kaydet
     async function saveRoomStats(room) {
         try {
