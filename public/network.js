@@ -75,24 +75,37 @@ window.updateRemoteBall = function (socketId, x, y) {
 // Sunucudan gelen yeni delik bilgisiyle tüm oyuncuların skorlarını ve map skorlarını eşitle
 window.advanceHole = function (room) {
     if (!window.isMultiplayer) return;
+    console.log("advanceHole çağrıldı, yeni harita yüklenecek:", room.currentHole);
     syncPlayersFromRoom(room);
-    // Skor kartını kapat ve bir sonraki haritaya geç
+    
+    // Skor kartını kapat ve butonu resetle
     if (window.uiElements && window.uiElements.scorecardOverlay) {
         window.uiElements.scorecardOverlay.classList.add('hidden');
     }
-    if (window.loadMap) window.loadMap(window.currentMapIndex + 1);
+    if (window.uiElements && window.uiElements.btnCloseScorecard) {
+        window.uiElements.btnCloseScorecard.disabled = false;
+        window.uiElements.btnCloseScorecard.textContent = 'Sonraki deliğe hazırım';
+    }
+    
+    // Bir sonraki haritaya geç
+    if (window.loadMap) {
+        window.loadMap(room.currentHole || 0);
+    }
 };
 
 // Tüm oyuncular deliği bitirdiğinde skor ekranını aç ve "Hazırım" butonunu aktifleştir
 window.enableNextHoleButton = function (room) {
     if (!window.isMultiplayer) return;
+    console.log("enableNextHoleButton çağrıldı - tüm oyuncular deliği bitirdi");
     syncPlayersFromRoom(room);
     if (window.renderPlayerList) window.renderPlayerList();
     if (window.updateScorecardUI) window.updateScorecardUI();
 
     // Eğer skor kartı henüz açılmadıysa şimdi aç
     if (window.uiElements && window.uiElements.scorecardOverlay && window.uiElements.scorecardOverlay.classList.contains('hidden')) {
-        if (window.showScorecard) window.showScorecard(false, null);
+        if (window.showScorecard) {
+            window.showScorecard(false, null); // Oyun bitmedi, sadece delik tamamlandı
+        }
     }
     if (window.uiElements && window.uiElements.btnCloseScorecard) {
         window.uiElements.btnCloseScorecard.disabled = false;

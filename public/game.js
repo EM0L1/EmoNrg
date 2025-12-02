@@ -245,9 +245,11 @@ function checkGameLogic() {
             });
             // Skor kartını gösterme, sadece durumu güncelle
             if (window.uiElements && window.uiElements.statusEl) {
-                window.uiElements.statusEl.textContent = `${term}! (Diğer oyuncular izleniyor...)`;
+                window.uiElements.statusEl.textContent = `${term}! Delik tamamlandı, diğer oyuncular bekleniyor...`;
             }
+            // Multiplayer'da skor kartı sunucudan gelen holeAllFinished event'i ile açılacak
         } else {
+            // Tek oyunculu: skor kartını göster
             if (window.uiElements && window.uiElements.statusEl) {
                 window.uiElements.statusEl.textContent = `${term}!`;
             }
