@@ -217,7 +217,118 @@ function initAuth() {
         authError.classList.add('hidden');
     }
 
-    // ... (Socket listeners remain same) ...
+    // --- ODA YÖNETİMİ VE SOCKET LISTENERLARI ---
+
+    function createRoom() {
+        const isPublic = roomPublicSwitch.checked;
+        console.log("Oda oluşturuluyor... Herkese açık:", isPublic);
+        if (socket) {
+            socket.emit('createRoom', { public: isPublic, creatorName: currentUser.displayName });
+        } else {
+            console.error("Socket bağlantısı yok!");
+        }
+    }
+
+    function joinRoom(roomId) {
+        console.log("Odaya katılınıyor:", roomId);
+        if (socket) {
+            socket.emit('joinRoom', { roomId: roomId, playerName: currentUser.displayName });
+        }
+    }
+
+    function joinRandom() {
+        console.log("Rastgele odaya katılınıyor...");
+        if (socket) {
+            socket.emit('joinRandom', { playerName: currentUser.displayName });
+        }
+    }
+
+    function leaveRoom() {
+        if (currentRoomId && socket) {
+            console.log("Odadan ayrılınıyor:", currentRoomId);
+            socket.emit('leaveRoom', currentRoomId);
+            currentRoomId = null;
+            showScreen('lobbyMenu');
+        }
+    }
+
+    function updatePlayerList(players) {
+        if (!roomPlayerList) return;
+        roomPlayerList.innerHTML = '';
+        if (playerCountSpan) playerCountSpan.textContent = players.length;
+
+        players.forEach(p => {
+            const li = document.createElement('li');
+            li.className = 'player-item';
+            li.innerHTML = `
+                <span class="p-name">${p.name} ${p.id === socket.id ? '(Sen)' : ''}</span>
+            `;
+            roomPlayerList.appendChild(li);
+        });
+
+        if (btnStartGame) {
+            // Tek başına test etmek için 1 kişi yeterli olsun
+            btnStartGame.disabled = players.length < 1;
+        }
+    }
+
+    function setupSocketListeners() {
+        if (!socket) return;
+
+        socket.on('roomCreated', (roomId) => {
+            console.log("Oda oluşturuldu:", roomId);
+            currentRoomId = roomId;
+            if (displayRoomCode) displayRoomCode.textContent = roomId;
+            showScreen('roomLobby');
+            // Odayı kuran kişi listeye eklenmeli (server playerJoined atıyor mu kontrol et)
+            // Genelde server roomCreated'dan sonra playerJoined atar veya roomJoined atar.
+            // Server koduna göre roomCreated sadece ID dönerse, listeyi manuel güncellemek gerekebilir.
+            // Ancak server.js'de createRoom -> socket.join -> emit roomCreated. 
+            // Player listesi için server ayrıca playerJoined atmalı.
+        });
+
+        socket.on('roomJoined', (data) => {
+            console.log("Odaya katılındı:", data.roomId);
+            currentRoomId = data.roomId;
+            if (displayRoomCode) displayRoomCode.textContent = data.roomId;
+            showScreen('roomLobby');
+            if (data.players) updatePlayerList(data.players);
+        });
+
+        socket.on('playerJoined', (players) => {
+            console.log("Yeni oyuncu katıldı.");
+            updatePlayerList(players);
+        });
+
+        socket.on('playerLeft', (players) => {
+            console.log("Bir oyuncu ayrıldı.");
+            updatePlayerList(players);
+        });
+
+        socket.on('gameStarted', () => {
+            console.log("Oyun başladı!");
+            showScreen(null);
+            document.getElementById('game').classList.remove('hidden');
+            if (window.startGameMulti) {
+                window.startGameMulti(currentRoomId);
+            }
+        });
+
+        socket.on('error', (msg) => {
+            alert("Hata: " + msg);
+        });
+
+        socket.on('leaderboardData', (data) => {
+            const tbody = document.getElementById('leaderboard-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            data.forEach((user, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${index + 1}</td><td>${user.displayName}</td><td>${user.totalScore}</td>`;
+                tbody.appendChild(tr);
+            });
+        });
+    }
 
     // --- EVENT LISTENERS ---
     if (btnAction) {
