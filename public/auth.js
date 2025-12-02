@@ -41,7 +41,7 @@ function initAuth() {
             // Socket bağlantısı var mı kontrol et
             if (!window.gameSocket || !window.gameSocket.connected) {
                 console.warn('Socket bağlantısı yok, leaderboard yüklenemiyor');
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Bağlantı bekleniyor...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #94a3b8;">Bağlantı bekleniyor...</td></tr>';
                 // 2 saniye sonra tekrar dene
                 setTimeout(() => {
                     if (window.fetchLeaderboard && window.gameSocket && window.gameSocket.connected) {
@@ -56,6 +56,13 @@ function initAuth() {
             // Sunucudan iste (UID ile beraber)
             const myUid = currentUser ? currentUser.uid : null;
             window.gameSocket.emit('requestLeaderboard', myUid);
+            
+            // 5 saniye içinde cevap gelmezse timeout
+            setTimeout(() => {
+                if (tbody.querySelector('td')?.textContent === 'Yükleniyor...') {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #94a3b8;">Henüz oyuncu yok</td></tr>';
+                }
+            }, 5000);
         };
 
         // saveGameStats ARTIK YOK (Sunucu hallediyor)
