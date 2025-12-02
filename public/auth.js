@@ -154,8 +154,16 @@ function initAuth() {
                 console.log("Kayıt başarılı, profil güncelleniyor...");
                 await cred.user.updateProfile({ displayName: nickname });
 
-                // Firestore'a ilk kaydı aç (window.db kontrolü)
+                // Firestore'a ilk kaydı aç
+                if (!window.db) {
+                    console.warn("window.db tanımlı değil, tekrar başlatılıyor...");
+                    if (firebase.firestore) {
+                        window.db = firebase.firestore();
+                    }
+                }
+
                 if (window.db) {
+                    console.log("Firestore yazma işlemi başlıyor...");
                     await window.db.collection('users').doc(cred.user.uid).set({
                         uid: cred.user.uid,
                         displayName: nickname,
@@ -163,10 +171,12 @@ function initAuth() {
                         totalScore: 0,
                         gamesPlayed: 0,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    console.log("Firestore kaydı oluşturuldu.");
+                    })
+                        .then(() => console.log("Firestore kaydı BAŞARIYLA oluşturuldu."))
+                        .catch((error) => console.error("Firestore yazma hatası:", error));
                 } else {
-                    console.error("Firestore (window.db) başlatılamamış!");
+                    console.error("KRİTİK HATA: Firestore başlatılamadığı için veri yazılamadı!");
+                    alert("Veritabanı bağlantı hatası! Puanlarınız kaydedilmeyebilir.");
                 }
             } else {
                 console.log("Giriş isteği gönderiliyor...");
