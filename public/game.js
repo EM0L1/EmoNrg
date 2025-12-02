@@ -156,6 +156,12 @@ function physicsStep(dt) {
     if (ball.y - ball.radius < 0) { ball.y = ball.radius; ball.vy *= -1; }
     if (ball.y + ball.radius > canvas.height) { ball.y = canvas.height - ball.radius; ball.vy *= -1; }
 
+    // Noclip mod kontrolu - sadece debug amaçlı
+    if (window.noclipMode) {
+        // Noclip aktifse duvar çarpışmalarını atla
+        return;
+    }
+
     if (window.currentMap && window.currentMap.walls) {
         window.currentMap.walls.forEach(wall => {
             const closestX = Math.max(wall.x, Math.min(ball.x, wall.x + wall.w));
@@ -598,3 +604,32 @@ if (window.uiElements && window.uiElements.shootBtn) {
         fireShotIfPossible();
     });
 }
+
+// DEBUG: Noclip modu - Sadece test için
+window.noclipMode = false;
+window.addEventListener('keydown', (e) => {
+    // 'N' tuşu ile noclip aç/kapat (test için)
+    if (e.key === 'n' || e.key === 'N') {
+        window.noclipMode = !window.noclipMode;
+        console.log(`🔧 DEBUG: Noclip ${window.noclipMode ? 'AÇIK ✅' : 'KAPALI ❌'}`);
+        
+        if (window.uiElements && window.uiElements.statusEl) {
+            if (window.noclipMode) {
+                window.uiElements.statusEl.textContent = '🔧 DEBUG: Noclip Aktif';
+                window.uiElements.statusEl.style.color = '#f59e0b';
+            } else {
+                window.uiElements.statusEl.textContent = 'Hazır';
+                window.uiElements.statusEl.style.color = '';
+            }
+        }
+    }
+    
+    // 'H' tuşu ile deliği direkt bitir (test için)
+    if ((e.key === 'h' || e.key === 'H') && window.noclipMode) {
+        ball.x = hole.x;
+        ball.y = hole.y;
+        ball.vx = 0;
+        ball.vy = 0;
+        console.log('🔧 DEBUG: Delik direkt tamamlandı!');
+    }
+});

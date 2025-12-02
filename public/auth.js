@@ -111,7 +111,7 @@ function initAuth() {
 
     let isRegisterMode = false;
 
-    function showScreen(screenName) {
+    window.showScreen = function showScreen(screenName) {
         Object.values(screens).forEach(el => el.classList.add('hidden'));
         if (screenName && screens[screenName]) screens[screenName].classList.remove('hidden');
 

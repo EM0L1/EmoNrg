@@ -206,7 +206,13 @@ uiElements.btnCloseScorecard.addEventListener('click', async () => {
         
         // Oyun bitti, lobiye dön
         if (uiElements.gameMain) uiElements.gameMain.classList.add('hidden');
-        if (uiElements.lobbyMenu) uiElements.lobbyMenu.classList.remove('hidden');
+        
+        // showScreen fonksiyonu auth.js'te tanımlı
+        if (typeof showScreen === 'function') {
+            showScreen('lobbyMenu');
+        } else if (uiElements.lobbyMenu) {
+            uiElements.lobbyMenu.classList.remove('hidden');
+        }
     } else {
         // Sonraki haritaya geç
         if (window.loadMap && typeof window.currentMapIndex !== 'undefined') {
@@ -218,8 +224,15 @@ uiElements.btnCloseScorecard.addEventListener('click', async () => {
 
 // Firebase'e oyun istatistiklerini kaydet
 async function saveGameStatsToFirebase() {
-    if (!window.db || !firebase.auth().currentUser) {
-        console.log("Firebase veya kullanıcı bulunamadı, kayıt yapılamadı.");
+    console.log('saveGameStatsToFirebase çağrıldı');
+    
+    if (!window.db) {
+        console.error('window.db tanımlı değil!');
+        return;
+    }
+    
+    if (!firebase.auth().currentUser) {
+        console.error('Firebase kullanıcısı giriş yapmamış!');
         return;
     }
     
@@ -227,11 +240,14 @@ async function saveGameStatsToFirebase() {
     const me = window.players?.find(p => p.isMe);
     
     if (!me) {
-        console.log("Oyuncu bilgisi bulunamadı.");
+        console.error('Oyuncu bilgisi bulunamadı. window.players:', window.players);
         return;
     }
     
     const totalScore = me.totalScore || 0;
+    const totalStrokes = me.totalStrokes || 0;
+    
+    console.log(`Kaydedilecek: Score=${totalScore}, Strokes=${totalStrokes}`);
     
     try {
         const userRef = window.db.collection('users').doc(user.uid);
@@ -248,10 +264,12 @@ async function saveGameStatsToFirebase() {
                 lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
             });
             
-            console.log(`Firebase'e kaydedildi: gamesPlayed=${newGamesPlayed}, totalScore=${newTotalScore}`);
+            console.log(`✅ Firebase'e kaydedildi: gamesPlayed=${newGamesPlayed}, totalScore=${newTotalScore}`);
+        } else {
+            console.error('Kullanıcı dokümanı bulunamadı!');
         }
     } catch (error) {
-        console.error("Firebase kayıt hatası:", error);
+        console.error('❌ Firebase kayıt hatası:', error);
     }
 }
 
