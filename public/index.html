@@ -1,130 +1,63 @@
-<!DOCTYPE html>
-<html lang="tr">
+<table id="scorecard-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+	<thead id="scorecard-head">
+		<!-- JS ile doldurulacak -->
+	</thead>
+	<tbody id="scorecard-body">
+		<!-- JS ile doldurulacak -->
+	</tbody>
+</table>
+<button id="btn-close-scorecard" class="btn primary">Devam Et</button>
+<button id="btn-restart-game" class="btn hidden">Ana Menüye Dön</button>
+</div>
+</div>
 
-<head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<h2>Oda Kodu: <span id="display-room-code"
-			style="font-family: monospace; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; color: #2563eb;">------</span>
-	</h2>
-	<button id="btn-leave-room" class="btn small"
-		style="background: #ef4444; color: white; border: none;">Ayrıl</button>
-	</div>
-
-	<div class="player-slots">
-		<h3>Oyuncular (<span id="player-count">1</span>/6)</h3>
-		<p style="font-size: 12px; color: #64748b;">Oyunun başlaması için en az 4 kişi gerekli.</p>
-
-		<ul id="room-player-list" class="player-list-grid">
-			<!-- Oyuncular buraya gelecek -->
-		</ul>
-	</div>
-
-	<div id="room-status-msg" style="margin: 15px 0; color: #f59e0b; font-weight: bold;">Oyuncular
-		bekleniyor...
-	</div>
-
-	<div id="room-color-picker"
-		style="margin: 10px 0 20px; text-align: left; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-		<p style="margin: 0 0 6px; font-size: 14px; color: #334155;">Rengini Seç:</p>
-		<div class="color-options">
-			<button class="color-option" data-color="red" title="Kırmızı"></button>
-			<button class="color-option" data-color="blue" title="Mavi"></button>
-			<button class="color-option" data-color="purple" title="Mor"></button>
-			<button class="color-option" data-color="green" title="Yeşil"></button>
-			<button class="color-option" data-color="yellow" title="Sarı"></button>
-			<button class="color-option" data-color="white" title="Beyaz"></button>
-			<button class="color-option" data-color="pink" title="Pembe"></button>
-			<button class="color-option" data-color="turquoise" title="Turkuaz"></button>
+<main id="game" class="hidden">
+	<header class="topbar">
+		<div>Oyuncu: <span id="display-name">-</span></div>
+		<div style="display: flex; gap: 20px;">
+			<span>Harita: <span id="map-info">1</span></span>
+			<span>Par: <span id="par-info">3</span></span>
+			<span>Vuruş: <span id="stroke-info">0</span></span>
 		</div>
-		<p id="room-color-error" class="error hidden" style="margin-top: 6px;"></p>
-	</div>
-
-	<button id="btn-start-game" class="btn primary large" disabled>Oyunu Başlat</button>
-	</div>
-	</div>
-
-	<div id="loading-screen" class="overlay hidden">
-		<div class="loading-content">
-			<div class="golf-ball-icon"></div>
-			<h2 id="loading-title">Mini Golf Arena</h2>
-			<p id="loading-text">Sonraki harita yükleniyor...</p>
-			<div id="hole-score-info" class="hidden"
-				style="margin-top: 20px; font-size: 24px; font-weight: bold; color: #fbbf24;">
-				<!-- Birdie! -1 -->
-			</div>
-		</div>
-	</div>
-
-	<div id="scorecard-overlay" class="overlay hidden">
-		<div class="card" style="max-width: 600px;">
-			<div id="round-result-area"
-				style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
-				<h2 id="round-result-title" style="color: #2563eb; font-size: 28px; margin-bottom: 5px;">
-				</h2>
-				<p id="round-result-points" style="font-size: 18px; color: #64748b; font-weight: 600;"></p>
-			</div>
-			<h2>Skor Tablosu</h2>
-			<table id="scorecard-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-				<thead id="scorecard-head">
-					<!-- JS ile doldurulacak -->
-				</thead>
-				<tbody id="scorecard-body">
-					<!-- JS ile doldurulacak -->
-				</tbody>
-			</table>
-			<button id="btn-close-scorecard" class="btn primary">Devam Et</button>
-			<button id="btn-restart-game" class="btn hidden">Ana Menüye Dön</button>
-		</div>
-	</div>
-
-	<main id="game" class="hidden">
-		<header class="topbar">
-			<div>Oyuncu: <span id="display-name">-</span></div>
-			<div style="display: flex; gap: 20px;">
-				<span>Harita: <span id="map-info">1</span></span>
-				<span>Par: <span id="par-info">3</span></span>
-				<span>Vuruş: <span id="stroke-info">0</span></span>
-			</div>
-			<div id="status">Lobiye bağlanmadı</div>
-		</header>
-		<section class="game-container">
-			<div class="canvas-wrapper">
-				<canvas id="game-canvas" width="800" height="500"></canvas>
-				<div id="power-container" class="hidden">
-					<div class="power-bar-bg">
-						<div id="power-bar-fill"></div>
-					</div>
-					<div class="power-controls">
-						<span class="power-label">Güç</span>
-						<div id="power-touch-area"></div>
-						<button id="shoot-btn" class="btn primary small">Vur</button>
-					</div>
+		<div id="status">Lobiye bağlanmadı</div>
+	</header>
+	<section class="game-container">
+		<div class="canvas-wrapper">
+			<canvas id="game-canvas" width="800" height="500"></canvas>
+			<div id="power-container" class="hidden">
+				<div class="power-bar-bg">
+					<div id="power-bar-fill"></div>
+				</div>
+				<div class="power-controls">
+					<span class="power-label">Güç</span>
+					<div id="power-touch-area"></div>
+					<button id="shoot-btn" class="btn primary small">Vur</button>
 				</div>
 			</div>
-			<aside class="player-sidebar">
-				<h3>Oyuncular</h3>
-				<ul id="player-list">
-					<!-- Oyuncu listesi buraya gelecek -->
-				</ul>
-			</aside>
-		</section>
-	</main>
+		</div>
+		<aside class="player-sidebar">
+			<h3>Oyuncular</h3>
+			<ul id="player-list">
+				<!-- Oyuncu listesi buraya gelecek -->
+			</ul>
+		</aside>
+	</section>
+</main>
 
-	<!-- Firebase SDKs (v8 compat) -->
-	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<!-- Firebase SDKs (v8 compat) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-	<!-- Socket.io -->
-	<script src="/socket.io/socket.io.js"></script>
+<!-- Socket.io -->
+<script src="/socket.io/socket.io.js"></script>
 
-	<!-- Game Scripts -->
-	<script src="maps.js"></script>
-	<script src="network.js"></script>
-	<script src="ui.js"></script>
-	<script src="game.js"></script>
-	<script src="auth.js"></script>
-	</body>
+<!-- Game Scripts -->
+<script src="maps.js"></script>
+<script src="network.js"></script>
+<script src="ui.js"></script>
+<script src="game.js"></script>
+<script src="auth.js"></script>
+</body>
 
 </html>
