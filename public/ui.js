@@ -31,13 +31,71 @@ const uiElements = {
 // Expose elements globally if needed, or just use them in functions
 window.uiElements = uiElements;
 
-// ... (Color Selection Logic remains same) ...
+// Render player list
+window.renderPlayerList = function () {
+    if (!uiElements.playerListEl) return;
+    uiElements.playerListEl.innerHTML = '';
+    
+    if (!window.players || window.players.length === 0) return;
+    
+    window.players.forEach(player => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '8px';
+        li.style.padding = '8px';
+        li.style.background = player.isMe ? '#e0f2fe' : '#f8fafc';
+        li.style.borderRadius = '6px';
+        li.style.border = '1px solid #cbd5e1';
+        
+        li.innerHTML = `
+            <strong>${player.name}</strong> ${player.isMe ? '(Sen)' : ''}<br>
+            <small>Skor: ${player.totalScore || 0} | Vuruş: ${player.totalStrokes || 0}</small>
+        `;
+        
+        uiElements.playerListEl.appendChild(li);
+    });
+};
 
-// ... (renderPlayerList remains same) ...
+// Update game UI
+window.updateGameUI = function () {
+    if (window.currentMap) {
+        if (uiElements.mapInfoEl) uiElements.mapInfoEl.textContent = `Harita: ${window.currentMap.id}`;
+        if (uiElements.parInfoEl) uiElements.parInfoEl.textContent = `Par: ${window.currentMap.par}`;
+    }
+    if (uiElements.strokeInfoEl) uiElements.strokeInfoEl.textContent = `Vuruş: ${window.currentStrokes || 0}`;
+};
 
-// ... (updateGameUI remains same) ...
-
-// ... (updateScorecardUI remains same) ...
+// Update scorecard UI
+window.updateScorecardUI = function () {
+    if (!uiElements.scorecardBody || !window.scoreHistory) return;
+    
+    uiElements.scorecardBody.innerHTML = '';
+    
+    window.scoreHistory.forEach(entry => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${entry.mapId}</td>
+            <td>${entry.par}</td>
+            <td>${entry.strokes}</td>
+            <td>${entry.score}</td>
+        `;
+        uiElements.scorecardBody.appendChild(tr);
+    });
+    
+    // Toplam skoru göster
+    const totalScore = window.scoreHistory.reduce((sum, e) => sum + e.score, 0);
+    const totalStrokes = window.scoreHistory.reduce((sum, e) => sum + e.strokes, 0);
+    
+    if (uiElements.scorecardHead) {
+        uiElements.scorecardHead.innerHTML = `
+            <tr>
+                <th>Harita</th>
+                <th>Par</th>
+                <th>Vuruş</th>
+                <th>Puan</th>
+            </tr>
+        `;
+    }
+};
 
 window.updateReadyCountUI = function (room) {
     if (!uiElements.readyCountInfo) return;
