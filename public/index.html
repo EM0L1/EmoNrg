@@ -4,70 +4,44 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<title>EmoNrg Mini Golf - Demo</title>
-	<link rel="stylesheet" href="style.css" />
-</head>
-
-<body>
-
-	<!-- 1. GİRİŞ EKRANI -->
-	<div id="auth-screen" class="overlay">
-		<div class="card">
-			<h1 id="auth-title">Giriş Yap</h1>
-			<p>Devam etmek için giriş yapın.</p>
-
-			<input id="room-code-input" type="text" placeholder="6 Haneli Kod" maxlength="6"
-				style="text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 24px;" />
-			<p id="join-error" class="error hidden"></p>
-			<div class="row">
-				<button id="btn-join-confirm" class="btn primary">Katıl</button>
-				<button id="btn-join-cancel" class="btn">İptal</button>
-			</div>
-		</div>
+	<h2>Oda Kodu: <span id="display-room-code"
+			style="font-family: monospace; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; color: #2563eb;">------</span>
+	</h2>
+	<button id="btn-leave-room" class="btn small"
+		style="background: #ef4444; color: white; border: none;">Ayrıl</button>
 	</div>
 
-	<!-- 5. ODA İÇİ BEKLEME EKRANI -->
-	<div id="room-lobby" class="overlay hidden">
-		<div class="card" style="max-width: 600px;">
-			<div class="room-header">
-				<h2>Oda Kodu: <span id="display-room-code"
-						style="font-family: monospace; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; color: #2563eb;">------</span>
-				</h2>
-				<button id="btn-leave-room" class="btn small"
-					style="background: #ef4444; color: white; border: none;">Ayrıl</button>
-			</div>
+	<div class="player-slots">
+		<h3>Oyuncular (<span id="player-count">1</span>/6)</h3>
+		<p style="font-size: 12px; color: #64748b;">Oyunun başlaması için en az 4 kişi gerekli.</p>
 
-			<div class="player-slots">
-				<h3>Oyuncular (<span id="player-count">1</span>/6)</h3>
-				<p style="font-size: 12px; color: #64748b;">Oyunun başlaması için en az 4 kişi gerekli.</p>
+		<ul id="room-player-list" class="player-list-grid">
+			<!-- Oyuncular buraya gelecek -->
+		</ul>
+	</div>
 
-				<ul id="room-player-list" class="player-list-grid">
-					<!-- Oyuncular buraya gelecek -->
-				</ul>
-			</div>
+	<div id="room-status-msg" style="margin: 15px 0; color: #f59e0b; font-weight: bold;">Oyuncular
+		bekleniyor...
+	</div>
 
-			<div id="room-status-msg" style="margin: 15px 0; color: #f59e0b; font-weight: bold;">Oyuncular
-				bekleniyor...
-			</div>
-
-			<div id="room-color-picker"
-				style="margin: 10px 0 20px; text-align: left; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-				<p style="margin: 0 0 6px; font-size: 14px; color: #334155;">Rengini Seç:</p>
-				<div class="color-options">
-					<button class="color-option" data-color="red" title="Kırmızı"></button>
-					<button class="color-option" data-color="blue" title="Mavi"></button>
-					<button class="color-option" data-color="purple" title="Mor"></button>
-					<button class="color-option" data-color="green" title="Yeşil"></button>
-					<button class="color-option" data-color="yellow" title="Sarı"></button>
-					<button class="color-option" data-color="white" title="Beyaz"></button>
-					<button class="color-option" data-color="pink" title="Pembe"></button>
-					<button class="color-option" data-color="turquoise" title="Turkuaz"></button>
-				</div>
-				<p id="room-color-error" class="error hidden" style="margin-top: 6px;"></p>
-			</div>
-
-			<button id="btn-start-game" class="btn primary large" disabled>Oyunu Başlat</button>
+	<div id="room-color-picker"
+		style="margin: 10px 0 20px; text-align: left; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+		<p style="margin: 0 0 6px; font-size: 14px; color: #334155;">Rengini Seç:</p>
+		<div class="color-options">
+			<button class="color-option" data-color="red" title="Kırmızı"></button>
+			<button class="color-option" data-color="blue" title="Mavi"></button>
+			<button class="color-option" data-color="purple" title="Mor"></button>
+			<button class="color-option" data-color="green" title="Yeşil"></button>
+			<button class="color-option" data-color="yellow" title="Sarı"></button>
+			<button class="color-option" data-color="white" title="Beyaz"></button>
+			<button class="color-option" data-color="pink" title="Pembe"></button>
+			<button class="color-option" data-color="turquoise" title="Turkuaz"></button>
 		</div>
+		<p id="room-color-error" class="error hidden" style="margin-top: 6px;"></p>
+	</div>
+
+	<button id="btn-start-game" class="btn primary large" disabled>Oyunu Başlat</button>
+	</div>
 	</div>
 
 	<div id="loading-screen" class="overlay hidden">
@@ -151,6 +125,6 @@
 	<script src="ui.js"></script>
 	<script src="game.js"></script>
 	<script src="auth.js"></script>
-</body>
+	</body>
 
 </html>
