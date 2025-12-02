@@ -430,7 +430,9 @@ function initAuth() {
                 window.uiElements.gameMain.classList.add('hidden');
             }
             // Lobi menüsünü aç
-            showScreen('lobbyMenu');
+            if (typeof window.showScreen === 'function') {
+                window.showScreen('lobbyMenu');
+            }
             currentRoomId = null;
             window.currentRoomIdForGame = null;
         });

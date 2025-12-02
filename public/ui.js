@@ -166,6 +166,10 @@ window.showScorecard = function (isGameOver = false, roundInfo = null) {
     
     // Buton metnini oyun durumuna göre ayarla
     if (uiElements.btnCloseScorecard) {
+        // Butonu her zaman aktif et
+        uiElements.btnCloseScorecard.disabled = false;
+        uiElements.btnCloseScorecard.style.cursor = 'pointer';
+        
         if (isGameOver) {
             uiElements.btnCloseScorecard.textContent = window.isMultiplayer ? 'Lobiye Dön' : 'Ana Menüye Dön';
             uiElements.btnCloseScorecard.style.background = '#059669';
@@ -207,9 +211,9 @@ uiElements.btnCloseScorecard.addEventListener('click', async () => {
         // Oyun bitti, lobiye dön
         if (uiElements.gameMain) uiElements.gameMain.classList.add('hidden');
         
-        // showScreen fonksiyonu auth.js'te tanımlı
-        if (typeof showScreen === 'function') {
-            showScreen('lobbyMenu');
+        // showScreen fonksiyonu window üzerinde global
+        if (typeof window.showScreen === 'function') {
+            window.showScreen('lobbyMenu');
         } else if (uiElements.lobbyMenu) {
             uiElements.lobbyMenu.classList.remove('hidden');
         }
@@ -294,6 +298,9 @@ window.updateReadyCountDisplay = function (ready, total) {
     
     if (window.isGameFinished && window.isMultiplayer) {
         uiElements.btnCloseScorecard.textContent = `Lobiye Dön (${ready}/${total})`;
+        // Butonu tekrar aktif et (kullanıcı henüz tıklamadıysa)
+        uiElements.btnCloseScorecard.disabled = false;
+        uiElements.btnCloseScorecard.style.background = '#059669';
     }
 };
 
