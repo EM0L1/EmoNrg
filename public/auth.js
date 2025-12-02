@@ -276,16 +276,16 @@ function initAuth() {
     function setupSocketListeners() {
         if (!socket) return;
 
-        socket.on('roomCreated', (roomId) => {
-            console.log("Oda oluşturuldu:", roomId);
-            currentRoomId = roomId;
-            if (displayRoomCode) displayRoomCode.textContent = roomId;
+        socket.on('roomCreated', (data) => {
+            console.log("Oda oluşturuldu:", data.roomId);
+            currentRoomId = data.roomId;
+            if (displayRoomCode) displayRoomCode.textContent = data.roomId;
             showScreen('roomLobby');
-            // Odayı kuran kişi listeye eklenmeli (server playerJoined atıyor mu kontrol et)
-            // Genelde server roomCreated'dan sonra playerJoined atar veya roomJoined atar.
-            // Server koduna göre roomCreated sadece ID dönerse, listeyi manuel güncellemek gerekebilir.
-            // Ancak server.js'de createRoom -> socket.join -> emit roomCreated. 
-            // Player listesi için server ayrıca playerJoined atmalı.
+
+            // Oyuncu listesini güncelle
+            if (data.room && data.room.players) {
+                updatePlayerList(Object.values(data.room.players));
+            }
         });
 
         socket.on('roomJoined', (data) => {
