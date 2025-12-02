@@ -87,9 +87,10 @@ window.advanceHole = function (room) {
         window.uiElements.btnCloseScorecard.textContent = 'Sonraki deliğe hazırım';
     }
     
-    // Bir sonraki haritaya geç
+    // Yeni haritayı yükle
+    window.currentMapIndex = room.currentHole || 0;
     if (window.loadMap) {
-        window.loadMap(room.currentHole || 0);
+        window.loadMap(window.currentMapIndex);
     }
 };
 

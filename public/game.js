@@ -41,6 +41,12 @@ window.generatePlayerId = function () {
 // Tek oyunculu başlatma
 window.startGameSingle = function (playerName) {
     localStorage.setItem('playerName', playerName);
+    
+    // Multiplayer kalıntılarını temizle
+    window.isMultiplayer = false;
+    window.remoteBalls = {};
+    window.currentRoomIdForGame = null;
+    
     window.showGame(playerName);
 };
 
@@ -77,7 +83,9 @@ window.showGame = function (name) {
     window.scoreHistory = [];
     window.currentStrokes = 0;
     if (window.updateScorecardUI) window.updateScorecardUI();
-
+    
+    // İlk haritadan başla
+    window.currentMapIndex = 0;
     window.drawInitialScene();
 }
 
