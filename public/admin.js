@@ -26,10 +26,18 @@ const loginError = document.getElementById('login-error');
 const spectatorOverlay = document.getElementById('spectator-overlay');
 
 // Auth state listener - otomatik giriş için
+let isAuthChecked = false;
 auth.onAuthStateChanged((user) => {
-    if (user) {
+    if (user && !isAuthChecked) {
         // Kullanıcı zaten giriş yapmış, admin kontrolü yap
+        console.log("Otomatik giriş tespit edildi:", user.email);
+        loginScreen.classList.add('hidden');
         socket.emit('adminLogin', user.uid);
+        isAuthChecked = true;
+    } else if (!user) {
+        // Kullanıcı ��ok, login ekranını göster
+        loginScreen.classList.remove('hidden');
+        dashboard.classList.add('hidden');
     }
 });
 

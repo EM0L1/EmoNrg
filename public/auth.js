@@ -129,7 +129,6 @@ function initAuth() {
     }
 
     // --- AUTH İŞLEMLERİ ---
-    // --- AUTH İŞLEMLERİ ---
     async function handleAuth(e) {
         if (e) e.preventDefault(); // Form submit engelleme
 
@@ -145,6 +144,7 @@ function initAuth() {
 
         const email = createFakeEmail(nickname);
         btnAction.disabled = true;
+        btnAction.textContent = isRegisterMode ? "Kayıt yapılıyor..." : "Giriş yapılıyor...";
 
         try {
             let cred;
@@ -187,7 +187,6 @@ function initAuth() {
 
             // BAŞARILI DURUM: Kullanıcıyı hemen lobiye al
             authError.classList.add('hidden');
-            // Butonu hemen açma, authStateChanged halledecek veya hata olursa catch bloğu açacak
 
             currentUser = cred.user;
             if (currentUser) {
@@ -197,6 +196,10 @@ function initAuth() {
                 }
                 showScreen('lobbyMenu');
             }
+            
+            // Butonu resetle
+            btnAction.disabled = false;
+            btnAction.textContent = isRegisterMode ? "Kayıt Ol" : "Giriş Yap";
         } catch (error) {
             console.error("Auth Hatası:", error);
             let msg = error.message;
@@ -207,6 +210,7 @@ function initAuth() {
             authError.textContent = msg;
             authError.classList.remove('hidden');
             btnAction.disabled = false;
+            btnAction.textContent = isRegisterMode ? "Kayıt Ol" : "Giriş Yap";
         }
     }
 
