@@ -439,6 +439,11 @@ function initAuth() {
             // Oyun durumunu sıfırla
             window.isGameFinished = false;
             window.gameStatsSaved = false;
+            
+            // Leaderboard'ı güncelle
+            if (window.fetchLeaderboard) {
+                setTimeout(() => window.fetchLeaderboard(), 500);
+            }
         });
 
         socket.on('error', (msg) => {
@@ -540,6 +545,11 @@ function initAuth() {
             if (document.getElementById('welcome-msg'))
                 document.getElementById('welcome-msg').textContent = `Merhaba, ${user.displayName}`;
             showScreen('lobbyMenu');
+            
+            // Lobiye geçince leaderboard'ı yükle
+            if (window.fetchLeaderboard) {
+                setTimeout(() => window.fetchLeaderboard(), 500);
+            }
         } else {
             console.log("Kullanıcı çıkış yaptı.");
             showScreen('auth');
@@ -549,9 +559,23 @@ function initAuth() {
 
 }
 
-// DOM yüklendiğinde başlat
+// DOM yüklendiginde başlat
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAuth);
+    document.addEventListener('DOMContentLoaded', () => {
+        initAuth();
+        // Sayfa yüklenince leaderboard'ı güncelle
+        setTimeout(() => {
+            if (window.fetchLeaderboard) {
+                window.fetchLeaderboard();
+            }
+        }, 1000);
+    });
 } else {
     initAuth();
+    // Sayfa yüklenince leaderboard'ı güncelle
+    setTimeout(() => {
+        if (window.fetchLeaderboard) {
+            window.fetchLeaderboard();
+        }
+    }, 1000);
 }

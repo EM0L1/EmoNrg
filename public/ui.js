@@ -226,6 +226,11 @@ uiElements.btnCloseScorecard.addEventListener('click', async () => {
             }
         }
         
+        // Leaderboard'ı güncelle
+        if (window.fetchLeaderboard) {
+            setTimeout(() => window.fetchLeaderboard(), 500);
+        }
+        
         // Oyun durumunu sıfırla
         window.isGameFinished = false;
         window.gameStatsSaved = false;
