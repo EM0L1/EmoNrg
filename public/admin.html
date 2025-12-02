@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmoNrg - Admin Paneli</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #1e293b;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Login Form */
+        #login-screen {
+            max-width: 400px;
+            margin: 100px auto;
+            background: #334155;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        /* Dashboard */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #334155;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #475569;
+        }
+
+        th {
+            background: #1e293b;
+        }
+
+        tr:hover {
+            background: #475569;
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            margin-right: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            border: none;
+        }
+
+        .btn-watch {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-end {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Spectator Overlay */
+        #spectator-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: #0f172a;
+            border: 2px solid #3b82f6;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #close-spectator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 1001;
+        }
+    </style>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- LOGIN SCREEN -->
+        <div id="login-screen">
+            <h2 style="text-align:center;">Admin Girişi</h2>
+            <input type="email" id="admin-email" placeholder="Email">
+            <input type="password" id="admin-password" placeholder="Şifre">
+            <button id="btn-login">Giriş Yap</button>
+            <p id="login-error" style="color: #ef4444; text-align: center; margin-top: 10px;" class="hidden"></p>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>Admin Paneli - Aktif Odalar</h1>
+                <div>
+                    <button id="btn-refresh" style="width:auto; background:#64748b;">Yenile</button>
+                    <button id="btn-logout" style="width:auto; background:#ef4444;">Çıkış</button>
+                </div>
+            </div>
+
+            <table id="rooms-table">
+                <thead>
+                    <tr>
+                        <th>Oda ID</th>
+                        <th>Durum</th>
+                        <th>Oyuncular</th>
+                        <th>Harita</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="rooms-body">
+                    <!-- Rows will be added here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SPECTATOR OVERLAY -->
+    <div id="spectator-overlay" class="hidden">
+        <button id="close-spectator">İzlemeyi Kapat</button>
+        <div id="game-container">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+        <p style="color:white; margin-top:10px;">CANLI İZLEME MODU (Müdahale Edilemez)</p>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Önce oyun mantığını yükle ama başlatma -->
+    <script>
+        // Game.js'in otomatik başlamasını engellemek için flag
+        window.isSpectatorMode = true; 
+    </script>
+    <script src="game.js"></script>
+    <script src="admin.js"></script>
+
+</body>
+
+</html>

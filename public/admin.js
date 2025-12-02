@@ -1,0 +1,130 @@
+// Firebase Config (Aynı config)
+const firebaseConfig = {
+    apiKey: "AIzaSyCN7_FvUFjWAjIFmdG7yO_nJUL0RJZmD_0",
+    authDomain: "mini-golf-arena-493dc.firebaseapp.com",
+    projectId: "mini-golf-arena-493dc",
+    storageBucket: "mini-golf-arena-493dc.firebasestorage.app",
+    messagingSenderId: "1025857887392",
+    appId: "1:1025857887392:web:5ad0a2428311f8a679bdc5",
+    measurementId: "G-1899GSVYY6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const socket = io();
+
+// UI Elements
+const loginScreen = document.getElementById('login-screen');
+const dashboard = document.getElementById('dashboard');
+const roomsBody = document.getElementById('rooms-body');
+const loginError = document.getElementById('login-error');
+const spectatorOverlay = document.getElementById('spectator-overlay');
+
+// Login
+document.getElementById('btn-login').addEventListener('click', async () => {
+    const email = document.getElementById('admin-email').value;
+    const password = document.getElementById('admin-password').value;
+
+    try {
+        const cred = await auth.signInWithEmailAndPassword(email, password);
+        // Sunucuya admin olduğunu bildir
+        socket.emit('adminLogin', cred.user.uid);
+    } catch (error) {
+        loginError.textContent = error.message;
+        loginError.classList.remove('hidden');
+    }
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+    auth.signOut();
+    location.reload();
+});
+
+document.getElementById('btn-refresh').addEventListener('click', () => {
+    socket.emit('getAllRooms');
+});
+
+document.getElementById('close-spectator').addEventListener('click', () => {
+    spectatorOverlay.classList.add('hidden');
+    // İzlemeyi durdur (sayfayı yenilemek en temizi olabilir ama şimdilik sadece gizle)
+    location.reload(); // Game loop'u temizlemek zor olduğu için reload en güvenlisi
+});
+
+// Socket Events
+socket.on('adminLoginSuccess', () => {
+    loginScreen.classList.add('hidden');
+    dashboard.classList.remove('hidden');
+    socket.emit('getAllRooms');
+
+    // Periyodik yenileme
+    setInterval(() => {
+        socket.emit('getAllRooms');
+    }, 5000);
+});
+
+socket.on('error', (msg) => {
+    loginError.textContent = msg;
+    loginError.classList.remove('hidden');
+});
+
+socket.on('roomList', (rooms) => {
+    roomsBody.innerHTML = '';
+    rooms.forEach(room => {
+        const tr = document.createElement('tr');
+
+        const playerNames = room.players.map(p => `${p.name} (${p.score})`).join(', ');
+
+        tr.innerHTML = `
+            <td>${room.id}</td>
+            <td><span style="padding:4px 8px; border-radius:4px; background:${room.status === 'playing' ? '#10b981' : '#f59e0b'}">${room.status}</span></td>
+            <td>${room.playerCount}/6 <br> <small style="color:#94a3b8">${playerNames}</small></td>
+            <td>${room.currentHole || 0}. Harita</td>
+            <td>
+                <button class="action-btn btn-watch" onclick="watchRoom('${room.id}')">Canlı İzle</button>
+                <button class="action-btn btn-end" onclick="endGame('${room.id}')">Oyunu Bitir</button>
+            </td>
+        `;
+        roomsBody.appendChild(tr);
+    });
+
+    if (rooms.length === 0) {
+        roomsBody.innerHTML = '<tr><td colspan="5" style="text-align:center">Aktif oda yok.</td></tr>';
+    }
+});
+
+// Global Functions for Buttons
+window.watchRoom = function (roomId) {
+    spectatorOverlay.classList.remove('hidden');
+
+    // Game.js'i spectator modunda başlat
+    window.isSpectator = true; // Game.js bunu kontrol edecek
+
+    // Canvas'ı hazırla
+    const canvas = document.getElementById('gameCanvas');
+    // Game.js'deki init fonksiyonlarını çağır (eğer varsa)
+    // Not: Game.js yüklendiğinde otomatik çalışıyorsa, onu durdurup yeniden başlatmak gerekebilir.
+    // Şimdilik basitçe socket eventini gönderelim, game.js zaten yüklü.
+
+    socket.emit('spectateRoom', roomId);
+
+    // Game.js'deki render loop'unun çalıştığından emin ol
+    if (!window.gameLoopRunning && window.gameLoop) {
+        window.gameLoop();
+    }
+};
+
+window.endGame = function (roomId) {
+    if (confirm(`${roomId} odasındaki oyunu bitirmek istediğine emin misin?`)) {
+        socket.emit('forceEndGame', roomId);
+    }
+};
+
+// Spectator Events (Game.js tarafından da dinlenebilir ama burada loglayalım)
+socket.on('spectateStarted', (room) => {
+    console.log("İzleme başladı:", room);
+    // Haritayı yükle
+    if (window.loadMap) {
+        window.loadMap(room.currentHole || 0);
+    }
+});

@@ -1,15 +1,3 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const path = require('path');
-
-const app = express();
-app.use(cors());
-
-// DÜZELTME: Dosyalar 'public' klasöründe olduğu için yolu oraya veriyoruz
-app.use(express.static(path.join(__dirname, 'public')));
-
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -32,8 +20,8 @@ function generateRoomId() {
     let result = "";
     do {
         result = "";
-        for(let i=0; i<6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
-    } while (rooms[result]); 
+        for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    } while (rooms[result]);
     return result;
 }
 
@@ -63,20 +51,20 @@ io.on('connection', (socket) => {
 
         // Bu uid için aktif socket'i kaydet (eski bağlantı varsa düşürülür)
         registerPlayerSocket(uid, socket);
-        
+
         rooms[roomId] = {
             id: roomId,
-            host: socket.id, 
+            host: socket.id,
             isPublic: isPublic,
-            status: 'waiting',
             players: {
                 [socket.id]: {
                     uid: uid,
                     name: name,
                     score: 0,
                     ready: true,
-                    x: 0, 
-                    y: 0
+                    x: 0,
+                    y: 0,
+                    color: 'white'
                 }
             }
         };
@@ -89,22 +77,10 @@ io.on('connection', (socket) => {
     // 2. ODAYA KATILMA
     socket.on('joinRoom', ({ roomId, uid, name }) => {
         const room = rooms[roomId];
-
-        if (!room) {
-            socket.emit('error', 'Böyle bir oda bulunamadı.');
-            return;
-        }
-        if (room.status !== 'waiting') {
-            socket.emit('error', 'Bu oda şu an oyunda.');
-            return;
-        }
-        if (Object.keys(room.players).length >= 6) {
-            socket.emit('error', 'Oda dolu.');
-            return;
-        }
-
-        // Bu uid için aktif socket'i kaydet (eski bağlantı varsa düşürülür)
-        registerPlayerSocket(uid, socket);
+        // Mevcut renkleri bul
+        const takenColors = new Set(Object.values(room.players).map(p => p.color));
+        const allColors = ['red', 'blue', 'purple', 'green', 'yellow', 'white', 'pink', 'turquoise'];
+        const assignedColor = allColors.find(c => !takenColors.has(c)) || 'white';
 
         room.players[socket.id] = {
             uid: uid,
@@ -112,20 +88,21 @@ io.on('connection', (socket) => {
             score: 0,
             ready: false,
             x: 0,
-            y: 0
+            y: 0,
+            color: assignedColor
         };
 
         socket.join(roomId);
         io.to(roomId).emit('roomUpdated', room);   // Odayı herkese güncelle
         socket.emit('joinedRoom', { roomId, room }); // Sadece bu istemciye "sen artık bu odadasın" de
-        console.log(`[KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${roomId}`);
+        console.log(`[KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${roomId} (Renk: ${assignedColor})`);
     });
 
     // 3. RASTGELE KATILMA
     socket.on('joinRandom', ({ uid, name }) => {
-        const availableRoomId = Object.keys(rooms).find(id => 
-            rooms[id].isPublic && 
-            rooms[id].status === 'waiting' && 
+        const availableRoomId = Object.keys(rooms).find(id =>
+            rooms[id].isPublic &&
+            rooms[id].status === 'waiting' &&
             Object.keys(rooms[id].players).length < 6
         );
 
@@ -135,14 +112,39 @@ io.on('connection', (socket) => {
             // Bu uid için aktif socket'i kaydet (eski bağlantı varsa düşürülür)
             registerPlayerSocket(uid, socket);
 
-            room.players[socket.id] = { uid, name, score: 0, ready: false, x: 0, y: 0 };
+            // Mevcut renkleri bul
+            const takenColors = new Set(Object.values(room.players).map(p => p.color));
+            const allColors = ['red', 'blue', 'purple', 'green', 'yellow', 'white', 'pink', 'turquoise'];
+            const assignedColor = allColors.find(c => !takenColors.has(c)) || 'white';
+
+            room.players[socket.id] = { uid, name, score: 0, ready: false, x: 0, y: 0, color: assignedColor };
             socket.join(availableRoomId);
             io.to(availableRoomId).emit('roomUpdated', room);         // herkese güncelle
             socket.emit('joinedRoom', { roomId: availableRoomId, room }); // sadece bu istemciye özel bilgi
-            console.log(`[RASTGELE KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${availableRoomId}`);
+            console.log(`[RASTGELE KATILIM] ${name} (UID: ${uid}) odaya katıldı: ${availableRoomId} (Renk: ${assignedColor})`);
         } else {
             socket.emit('error', 'Uygun oda bulunamadı. Lütfen yeni oda kurun.');
         }
+    });
+
+    // RENK SEÇİMİ
+    socket.on('selectColor', ({ roomId, color }) => {
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const player = room.players[socket.id];
+        if (!player) return;
+
+        // Renk başkası tarafından alınmış mı?
+        const isTaken = Object.values(room.players).some(p => p.color === color && p.uid !== player.uid);
+
+        if (isTaken) {
+            socket.emit('error', 'Bu renk zaten alınmış.');
+            return;
+        }
+
+        player.color = color;
+        io.to(roomId).emit('roomUpdated', room);
     });
 
     // 4. ODADAN AYRILMA
@@ -158,7 +160,7 @@ io.on('connection', (socket) => {
     // 5. OYUNU BAŞLAT
     socket.on('startGame', (roomId) => {
         const room = rooms[roomId];
-        if(room && room.host === socket.id) {
+        if (room && room.host === socket.id) {
             room.status = 'playing';
             io.to(roomId).emit('gameStarted', room); // tüm oyunculara oda bilgisiyle birlikte gönder
             console.log(`[OYUN BAŞLADI] Oda: ${roomId}`);
@@ -206,42 +208,137 @@ io.on('connection', (socket) => {
     });
 
     // 8. OYUNCULAR BİR SONRAKİ DELİĞE HAZIR OLDUĞUNU BİLDİRDİĞİNDE
-    socket.on('readyNextHole', ({ roomId }) => {
+    // 8. OYUNCULAR BİR SONRAKİ DELİĞE HAZIR OLDUĞUNU BİLDİRDİĞİNDE
+    socket.on('readyNextHole', ({ roomId, isGameOver }) => {
         const room = rooms[roomId];
         if (!room) return;
         const player = room.players[socket.id];
         if (!player) return;
 
         player.readyForNextHole = true;
+        // Eğer bir oyuncu oyun bitti diyorsa, oda için de bitmiş sayabiliriz (basitlik için)
+        if (isGameOver) room.isGameOver = true;
 
         const allReady = Object.values(room.players).every(
             p => p.finishedCurrentHole && p.readyForNextHole
         );
 
         if (allReady) {
-            // Yeni deliğe geç
-            room.currentHole = (room.currentHole || 0) + 1;
-            Object.values(room.players).forEach(p => {
-                p.finishedCurrentHole = false;
-                p.readyForNextHole = false;
-            });
+            if (room.isGameOver) {
+                // OYUN BİTTİ
+                console.log(`[OYUN BİTTİ] Oda: ${roomId}. İstatistikler kaydediliyor...`);
+                saveRoomStats(room);
 
-            io.to(roomId).emit('advanceHole', room);
-            console.log(`[SONRAKİ DELİK] Oda: ${roomId}, tüm oyuncular hazır. Yeni delik index: ${room.currentHole}`);
+                // Oyuncuları lobiye döndür veya bitiş ekranı göster (şimdilik lobiye dönüyorlar)
+                io.to(roomId).emit('gameFinished', room);
+
+                // Odayı temizle veya resetle
+                room.status = 'waiting';
+                room.currentHole = 0;
+                room.isGameOver = false;
+                Object.values(room.players).forEach(p => {
+                    p.score = 0;
+                    p.mapScores = {};
+                    p.ready = false;
+                    p.finishedCurrentHole = false;
+                    p.readyForNextHole = false;
+                });
+                io.to(roomId).emit('roomUpdated', room);
+
+            } else {
+                // YENİ DELİĞE GEÇ
+                room.currentHole = (room.currentHole || 0) + 1;
+                Object.values(room.players).forEach(p => {
+                    p.finishedCurrentHole = false;
+                    p.readyForNextHole = false;
+                });
+
+                io.to(roomId).emit('advanceHole', room);
+                console.log(`[SONRAKİ DELİK] Oda: ${roomId}, tüm oyuncular hazır. Yeni delik index: ${room.currentHole}`);
+            }
         } else {
             // Sadece bilgi amaçlı lobi güncellemesi
             io.to(roomId).emit('roomUpdated', room);
         }
     });
 
+    // --- ADMIN PANEL EVENTS ---
+    socket.on('adminLogin', async (uid) => {
+        try {
+            const userDoc = await db.collection('users').doc(uid).get();
+            if (userDoc.exists && userDoc.data().role === 'manager') {
+                socket.isAdmin = true;
+                socket.emit('adminLoginSuccess');
+                console.log(`[ADMIN GİRİŞİ] UID: ${uid}`);
+            } else {
+                socket.emit('error', 'Yetkisiz giriş denemesi.');
+            }
+        } catch (error) {
+            console.error("Admin login hatası:", error);
+            socket.emit('error', 'Giriş hatası.');
+        }
+    });
+
+    socket.on('getAllRooms', () => {
+        if (!socket.isAdmin) return;
+
+        // Odaları diziye çevirip gönder
+        const roomList = Object.values(rooms).map(r => ({
+            id: r.id,
+            host: r.host,
+            playerCount: Object.keys(r.players).length,
+            status: r.status,
+            currentHole: r.currentHole,
+            players: Object.values(r.players).map(p => ({ name: p.name, score: p.score }))
+        }));
+        socket.emit('roomList', roomList);
+    });
+
+    socket.on('spectateRoom', (roomId) => {
+        if (!socket.isAdmin) return;
+        const room = rooms[roomId];
+        if (room) {
+            socket.join(roomId); // Odayı dinlemeye başla
+            socket.emit('spectateStarted', room);
+            console.log(`[ADMIN İZLİYOR] Admin ${socket.id} -> Oda ${roomId}`);
+        } else {
+            socket.emit('error', 'Oda bulunamadı.');
+        }
+    });
+
+    socket.on('forceEndGame', (roomId) => {
+        if (!socket.isAdmin) return;
+        const room = rooms[roomId];
+        if (room) {
+            console.log(`[ADMIN OYUNU BİTİRDİ] Oda: ${roomId}`);
+            io.to(roomId).emit('gameFinished', room); // Normal bitiş gibi davran
+
+            // Odayı resetle
+            room.status = 'waiting';
+            room.currentHole = 0;
+            room.isGameOver = false;
+            Object.values(room.players).forEach(p => {
+                p.score = 0;
+                p.mapScores = {};
+                p.ready = false;
+                p.finishedCurrentHole = false;
+                p.readyForNextHole = false;
+            });
+            io.to(roomId).emit('roomUpdated', room);
+
+            // Adminlere güncel listeyi at
+            // (Gerçek uygulamada broadcast yapmak daha iyi olurdu)
+        }
+    });
+
     function handleDisconnect(socket) {
         const roomId = Object.keys(rooms).find(id => rooms[id].players[socket.id]);
-        
+
         if (roomId) {
             const room = rooms[roomId];
             const player = room.players[socket.id]; // Oyuncu bilgilerini al
             const wasHost = (room.host === socket.id);
-            
+
             delete room.players[socket.id];
             socket.leave(roomId);
 
@@ -273,7 +370,7 @@ io.on('connection', (socket) => {
     }
 });
 
-const PORT = 4513; 
+const PORT = 4513;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`SUNUCU HAZIR! http://localhost:${PORT} adresinden girebilirsin.`);
 });
