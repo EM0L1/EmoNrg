@@ -33,14 +33,29 @@ function initAuth() {
         // --- FIRESTORE HELPERS (ARTIK SOCKET ÜZERİNDEN) ---
         window.fetchLeaderboard = function () {
             const tbody = document.getElementById('leaderboard-body');
-            if (!tbody) return;
+            if (!tbody) {
+                console.warn('Leaderboard tbody bulunamadı');
+                return;
+            }
+            
+            // Socket bağlantısı var mı kontrol et
+            if (!window.gameSocket || !window.gameSocket.connected) {
+                console.warn('Socket bağlantısı yok, leaderboard yüklenemiyor');
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Bağlantı bekleniyor...</td></tr>';
+                // 2 saniye sonra tekrar dene
+                setTimeout(() => {
+                    if (window.fetchLeaderboard && window.gameSocket && window.gameSocket.connected) {
+                        window.fetchLeaderboard();
+                    }
+                }, 2000);
+                return;
+            }
+            
             tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Yükleniyor...</td></tr>';
 
             // Sunucudan iste (UID ile beraber)
-            if (window.gameSocket) {
-                const myUid = currentUser ? currentUser.uid : null;
-                window.gameSocket.emit('requestLeaderboard', myUid);
-            }
+            const myUid = currentUser ? currentUser.uid : null;
+            window.gameSocket.emit('requestLeaderboard', myUid);
         };
 
         // saveGameStats ARTIK YOK (Sunucu hallediyor)
@@ -460,11 +475,19 @@ function initAuth() {
             const tbody = document.getElementById('leaderboard-body');
             if (!tbody) return;
             tbody.innerHTML = '';
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Henüz oyuncu yok</td></tr>';
+                return;
+            }
+            
             data.forEach((user, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `<td>${index + 1}</td><td>${user.displayName}</td><td>${user.totalScore}</td>`;
                 tbody.appendChild(tr);
             });
+            
+            console.log('✅ Leaderboard güncellendi:', data.length, 'oyuncu');
         });
     }
 
@@ -546,30 +569,34 @@ function initAuth() {
                 document.getElementById('welcome-msg').textContent = `Merhaba, ${user.displayName}`;
             showScreen('lobbyMenu');
             
-            // Lobiye geçince leaderboard'ı yükle
+            // Lobiye geçince leaderboard'ı yükle (socket bağlantısını bekle)
             if (window.fetchLeaderboard) {
-                setTimeout(() => window.fetchLeaderboard(), 500);
+                setTimeout(() => {
+                    if (window.gameSocket && window.gameSocket.connected) {
+                        window.fetchLeaderboard();
+                    }
+                }, 1000);
             }
         } else {
             console.log("Kullanıcı çıkış yaptı.");
             showScreen('auth');
         }
-    });
-
-
-}
-
-// DOM yüklendiginde başlat
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initAuth();
-        // Sayfa yüklenince leaderboard'ı güncelle
+    }); initAuth();
+        // Sayfa yüklenince leaderboard'ı güncelle (socket bağlantısı için daha fazla bekle)
         setTimeout(() => {
-            if (window.fetchLeaderboard) {
+            if (window.fetchLeaderboard && window.gameSocket && window.gameSocket.connected) {
                 window.fetchLeaderboard();
             }
-        }, 1000);
+        }, 2000);
     });
+} else {
+    initAuth();
+    // Sayfa yüklenince leaderboard'ı güncelle (socket bağlantısı için daha fazla bekle)
+    setTimeout(() => {
+        if (window.fetchLeaderboard && window.gameSocket && window.gameSocket.connected) {
+            window.fetchLeaderboard();
+        }
+    }, 2000);
 } else {
     initAuth();
     // Sayfa yüklenince leaderboard'ı güncelle
