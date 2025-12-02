@@ -405,12 +405,34 @@ function initAuth() {
             }
         });
 
-        socket.on('gameFinished', (room) => {
-            console.log("Oyun bitti!", room);
-            // Skor kartını göster ve lobiye dönme seçeneği sun
-            if (window.showScorecard) {
-                window.showScorecard(true);
+        socket.on('readyCountUpdate', ({ ready, total }) => {
+            console.log(`Hazır oyuncu: ${ready}/${total}`);
+            if (window.updateReadyCountDisplay) {
+                window.updateReadyCountDisplay(ready, total);
             }
+        });
+
+        socket.on('gameOverCountdown', (seconds) => {
+            console.log(`Oyun bitti! Lobiye dönüş: ${seconds} saniye`);
+            if (window.showCountdown) {
+                window.showCountdown(seconds);
+            }
+        });
+
+        socket.on('returnToLobby', () => {
+            console.log("Lobiye dönülüyor...");
+            // Skor ekranını kapat
+            if (window.uiElements && window.uiElements.scorecardOverlay) {
+                window.uiElements.scorecardOverlay.classList.add('hidden');
+            }
+            // Oyun ekranını kapat
+            if (window.uiElements && window.uiElements.gameMain) {
+                window.uiElements.gameMain.classList.add('hidden');
+            }
+            // Lobi menüsünü aç
+            showScreen('lobbyMenu');
+            currentRoomId = null;
+            window.currentRoomIdForGame = null;
         });
 
         socket.on('error', (msg) => {

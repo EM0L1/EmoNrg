@@ -211,7 +211,7 @@ io.on('connection', (socket) => {
     });
 
     // 7. BİR OYUNCU DELİĞİ TAMAMLADIĞINDA (SKOR & MAP SKORU GÜNCELLEME)
-    socket.on('holeCompleted', ({ roomId, points, mapId }) => {
+    socket.on('holeCompleted', ({ roomId, points, strokes, mapId }) => {
         const room = rooms[roomId];
         if (!room) return;
 
@@ -220,6 +220,7 @@ io.on('connection', (socket) => {
 
         // Skoru güncelle
         player.score = (player.score || 0) + (points || 0);
+        player.totalStrokes = (player.totalStrokes || 0) + (strokes || 0);
         // Harita bazlı skorları tut
         if (mapId !== undefined) {
             if (!player.mapScores) player.mapScores = {};
@@ -254,28 +255,46 @@ io.on('connection', (socket) => {
         const allReady = Object.values(room.players).every(
             p => p.finishedCurrentHole && p.readyForNextHole
         );
+        
+        // Hazır olan oyuncu sayısını herkese bildir
+        const readyCount = Object.values(room.players).filter(p => p.readyForNextHole).length;
+        const totalCount = Object.values(room.players).length;
+        io.to(roomId).emit('readyCountUpdate', { ready: readyCount, total: totalCount });
 
         if (allReady) {
             if (room.isGameOver) {
-                // OYUN BİTTİ
-                console.log(`[OYUN BİTTİ] Oda: ${roomId}. İstatistikler kaydediliyor...`);
+                // OYUN BİTTİ - 5 saniye sayaç başlat
+                console.log(`[OYUN BİTTİ] Oda: ${roomId}. 5 saniye sayaç başlatılıyor...`);
                 saveRoomStats(room);
 
-                // Oyuncuları lobiye döndür veya bitiş ekranı göster (şimdilik lobiye dönüyorlar)
-                io.to(roomId).emit('gameFinished', room);
-
-                // Odayı temizle veya resetle
-                room.status = 'waiting';
-                room.currentHole = 0;
-                room.isGameOver = false;
-                Object.values(room.players).forEach(p => {
-                    p.score = 0;
-                    p.mapScores = {};
-                    p.ready = false;
-                    p.finishedCurrentHole = false;
-                    p.readyForNextHole = false;
-                });
-                io.to(roomId).emit('roomUpdated', room);
+                let countdown = 5;
+                io.to(roomId).emit('gameOverCountdown', countdown);
+                
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        io.to(roomId).emit('gameOverCountdown', countdown);
+                    } else {
+                        clearInterval(countdownInterval);
+                        
+                        // Herkesi lobiye gönder
+                        io.to(roomId).emit('returnToLobby');
+                        
+                        // Odayı temizle veya resetle
+                        room.status = 'waiting';
+                        room.currentHole = 0;
+                        room.isGameOver = false;
+                        Object.values(room.players).forEach(p => {
+                            p.score = 0;
+                            p.totalStrokes = 0;
+                            p.mapScores = {};
+                            p.ready = false;
+                            p.finishedCurrentHole = false;
+                            p.readyForNextHole = false;
+                        });
+                        io.to(roomId).emit('roomUpdated', room);
+                    }
+                }, 1000);
 
             } else {
                 // YENİ DELİĞE GEÇ

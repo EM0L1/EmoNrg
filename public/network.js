@@ -137,6 +137,7 @@ function syncPlayersFromRoom(room) {
         const serverPlayer = Object.values(roomPlayers).find(sp => sp.uid === p.uid);
         if (serverPlayer) {
             p.totalScore = serverPlayer.score || 0;
+            p.totalStrokes = serverPlayer.totalStrokes || 0;
             p.mapScores = serverPlayer.mapScores || {};
         }
     });

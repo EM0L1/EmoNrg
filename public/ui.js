@@ -154,6 +154,12 @@ window.showScorecard = function (isGameOver = false, roundInfo = null) {
         uiElements.roundResultArea.classList.remove('hidden');
         uiElements.roundResultTitle.textContent = roundInfo.term;
         uiElements.roundResultPoints.textContent = `${roundInfo.points > 0 ? '+' : ''}${roundInfo.points} Puan`;
+    } else if (isGameOver) {
+        // Oyun bitti mesajı
+        uiElements.roundResultArea.classList.remove('hidden');
+        uiElements.roundResultTitle.textContent = '🎉 Oyun Bitti! 🎉';
+        uiElements.roundResultPoints.textContent = 'Tebrikler, tüm haritaları tamamladınız!';
+        uiElements.roundResultTitle.style.color = '#059669';
     } else {
         uiElements.roundResultArea.classList.add('hidden');
     }
@@ -162,17 +168,24 @@ window.showScorecard = function (isGameOver = false, roundInfo = null) {
     if (uiElements.btnCloseScorecard) {
         if (isGameOver) {
             uiElements.btnCloseScorecard.textContent = window.isMultiplayer ? 'Lobiye Dön' : 'Ana Menüye Dön';
+            uiElements.btnCloseScorecard.style.background = '#059669';
         } else {
             uiElements.btnCloseScorecard.textContent = window.isMultiplayer ? 'Sonraki deliğe hazırım' : 'Sonraki Harita';
+            uiElements.btnCloseScorecard.style.background = '#2563eb';
         }
     }
 }
 
 // Event Listeners
-uiElements.btnCloseScorecard.addEventListener('click', () => {
+uiElements.btnCloseScorecard.addEventListener('click', async () => {
     // Çok oyunculuda: hazır olduğunu sunucuya bildir
     if (window.isMultiplayer) {
         if (window.gameSocket && window.currentRoomIdForGame) {
+            // Oyun bitti ise Firebase'e kaydet
+            if (window.isGameFinished) {
+                await saveGameStatsToFirebase();
+            }
+            
             window.gameSocket.emit('readyNextHole', {
                 roomId: window.currentRoomIdForGame,
                 isGameOver: window.isGameFinished
@@ -182,11 +195,15 @@ uiElements.btnCloseScorecard.addEventListener('click', () => {
         }
         return;
     }
+    
     // Tek oyunculu: doğrudan sonraki haritaya geç
     uiElements.scorecardOverlay.classList.add('hidden');
     
     // Oyun bitti mi kontrol et
     if (window.isGameFinished) {
+        // Firebase'e kaydet
+        await saveGameStatsToFirebase();
+        
         // Oyun bitti, lobiye dön
         if (uiElements.gameMain) uiElements.gameMain.classList.add('hidden');
         if (uiElements.lobbyMenu) uiElements.lobbyMenu.classList.remove('hidden');
@@ -198,6 +215,45 @@ uiElements.btnCloseScorecard.addEventListener('click', () => {
         }
     }
 });
+
+// Firebase'e oyun istatistiklerini kaydet
+async function saveGameStatsToFirebase() {
+    if (!window.db || !firebase.auth().currentUser) {
+        console.log("Firebase veya kullanıcı bulunamadı, kayıt yapılamadı.");
+        return;
+    }
+    
+    const user = firebase.auth().currentUser;
+    const me = window.players?.find(p => p.isMe);
+    
+    if (!me) {
+        console.log("Oyuncu bilgisi bulunamadı.");
+        return;
+    }
+    
+    const totalScore = me.totalScore || 0;
+    
+    try {
+        const userRef = window.db.collection('users').doc(user.uid);
+        const userDoc = await userRef.get();
+        
+        if (userDoc.exists) {
+            const currentData = userDoc.data();
+            const newGamesPlayed = (currentData.gamesPlayed || 0) + 1;
+            const newTotalScore = (currentData.totalScore || 0) + totalScore;
+            
+            await userRef.update({
+                gamesPlayed: newGamesPlayed,
+                totalScore: newTotalScore,
+                lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            console.log(`Firebase'e kaydedildi: gamesPlayed=${newGamesPlayed}, totalScore=${newTotalScore}`);
+        }
+    } catch (error) {
+        console.error("Firebase kayıt hatası:", error);
+    }
+}
 
 uiElements.btnRestartGame.addEventListener('click', () => {
     // Oyunu sıfırla ve lobi menüsüne dön
@@ -213,3 +269,22 @@ window.updatePowerBarUI = function (percent) {
         uiElements.powerTouchArea.style.setProperty('--power-percent', percent + '%');
     }
 }
+
+// Hazır oyuncu sayısını göster
+window.updateReadyCountDisplay = function (ready, total) {
+    if (!uiElements.btnCloseScorecard) return;
+    
+    if (window.isGameFinished && window.isMultiplayer) {
+        uiElements.btnCloseScorecard.textContent = `Lobiye Dön (${ready}/${total})`;
+    }
+};
+
+// Sayaç göster
+window.showCountdown = function (seconds) {
+    if (!uiElements.btnCloseScorecard) return;
+    
+    uiElements.btnCloseScorecard.disabled = true;
+    uiElements.btnCloseScorecard.textContent = `Lobiye dönülüyor... ${seconds}`;
+    uiElements.btnCloseScorecard.style.background = '#f59e0b';
+    uiElements.btnCloseScorecard.style.cursor = 'not-allowed';
+};

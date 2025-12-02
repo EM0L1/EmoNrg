@@ -162,15 +162,17 @@
 	</div>
 
 	<div id="scorecard-overlay" class="overlay hidden">
-		<div class="card" style="max-width: 600px;">
+		<div class="card scorecard-card" style="max-width: 650px;">
 			<div id="round-result-area"
 				style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
-				<h2 id="round-result-title" style="color: #2563eb; font-size: 28px; margin-bottom: 5px;">
+				<h2 id="round-result-title" style="color: #2563eb; font-size: 32px; margin-bottom: 5px;">
 				</h2>
-				<p id="round-result-points" style="font-size: 18px; color: #64748b; font-weight: 600;"></p>
+				<p id="round-result-points" style="font-size: 20px; color: #64748b; font-weight: 600;"></p>
 			</div>
-			<h2>Skor Tablosu</h2>
-			<table id="scorecard-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+			<div style="text-align: center; margin-bottom: 15px;">
+				<h2 style="font-size: 24px; color: #111; margin: 0;">🏆 Skor Tablosu</h2>
+			</div>
+			<table id="scorecard-table" class="scorecard-table">
 				<thead id="scorecard-head">
 					<!-- JS ile doldurulacak -->
 				</thead>
@@ -178,7 +180,7 @@
 					<!-- JS ile doldurulacak -->
 				</tbody>
 			</table>
-			<button id="btn-close-scorecard" class="btn primary">Devam Et</button>
+			<button id="btn-close-scorecard" class="btn primary btn-scorecard">Devam Et</button>
 			<button id="btn-restart-game" class="btn hidden">Ana Menüye Dön</button>
 		</div>
 	</div>

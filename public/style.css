@@ -357,3 +357,98 @@ canvas { background: linear-gradient(180deg,#d1f7e7,#bfeedd); border-radius:8px;
         padding: 20px 0;
     }
 }
+
+/* Scorecard (Bitiş Ekranı) Güzelleştirme */
+.scorecard-card {
+    animation: slideInUp 0.4s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.scorecard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.scorecard-table thead {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+}
+
+.scorecard-table th {
+    padding: 14px 12px;
+    font-weight: 600;
+    text-align: left;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.scorecard-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 15px;
+}
+
+.scorecard-table tbody tr {
+    transition: background 0.2s;
+}
+
+.scorecard-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.scorecard-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.scorecard-table tbody tr:first-child {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    font-weight: 600;
+}
+
+.scorecard-table tbody tr:first-child:hover {
+    background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+}
+
+.btn-scorecard {
+    font-size: 16px;
+    padding: 14px 28px;
+    width: 100%;
+    margin-top: 10px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-scorecard::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-scorecard:hover::before {
+    width: 300px;
+    height: 300px;
+}
+

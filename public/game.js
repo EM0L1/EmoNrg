@@ -257,6 +257,7 @@ function checkGameLogic() {
             window.gameSocket.emit('holeCompleted', {
                 roomId: window.currentRoomIdForGame,
                 points,
+                strokes: window.currentStrokes,
                 mapId: window.currentMap.id
             });
             // Skor kartını gösterme, sadece durumu güncelle
