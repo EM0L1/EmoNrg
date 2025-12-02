@@ -185,9 +185,10 @@ uiElements.btnCloseScorecard.addEventListener('click', async () => {
     // Çok oyunculuda: hazır olduğunu sunucuya bildir
     if (window.isMultiplayer) {
         if (window.gameSocket && window.currentRoomIdForGame) {
-            // Oyun bitti ise Firebase'e kaydet
-            if (window.isGameFinished) {
+            // Oyun bitti ise Firebase'e kaydet (sadece bir kere)
+            if (window.isGameFinished && !window.gameStatsSaved) {
                 await saveGameStatsToFirebase();
+                window.gameStatsSaved = true;
             }
             
             window.gameSocket.emit('readyNextHole', {
@@ -205,18 +206,29 @@ uiElements.btnCloseScorecard.addEventListener('click', async () => {
     
     // Oyun bitti mi kontrol et
     if (window.isGameFinished) {
-        // Firebase'e kaydet
-        await saveGameStatsToFirebase();
+        // Firebase'e kaydet (sadece bir kere)
+        if (!window.gameStatsSaved) {
+            await saveGameStatsToFirebase();
+            window.gameStatsSaved = true;
+        }
         
         // Oyun bitti, lobiye dön
         if (uiElements.gameMain) uiElements.gameMain.classList.add('hidden');
         
         // showScreen fonksiyonu window üzerinde global
         if (typeof window.showScreen === 'function') {
+            console.log('✅ window.showScreen çağrılıyor...');
             window.showScreen('lobbyMenu');
-        } else if (uiElements.lobbyMenu) {
-            uiElements.lobbyMenu.classList.remove('hidden');
+        } else {
+            console.warn('⚠️ window.showScreen bulunamadı, fallback kullanılıyor');
+            if (uiElements.lobbyMenu) {
+                uiElements.lobbyMenu.classList.remove('hidden');
+            }
         }
+        
+        // Oyun durumunu sıfırla
+        window.isGameFinished = false;
+        window.gameStatsSaved = false;
     } else {
         // Sonraki haritaya geç
         if (window.loadMap && typeof window.currentMapIndex !== 'undefined') {

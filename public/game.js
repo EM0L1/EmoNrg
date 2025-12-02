@@ -47,6 +47,10 @@ window.startGameSingle = function (playerName) {
     window.remoteBalls = {};
     window.currentRoomIdForGame = null;
     
+    // Oyun durumunu sıfırla
+    window.isGameFinished = false;
+    window.gameStatsSaved = false;
+    
     window.showGame(playerName);
 };
 
@@ -83,6 +87,10 @@ window.showGame = function (name) {
     window.scoreHistory = [];
     window.currentStrokes = 0;
     if (window.updateScorecardUI) window.updateScorecardUI();
+    
+    // Oyun durumunu sıfırla
+    window.isGameFinished = false;
+    window.gameStatsSaved = false;
     
     // İlk haritadan başla
     window.currentMapIndex = 0;

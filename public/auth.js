@@ -435,6 +435,10 @@ function initAuth() {
             }
             currentRoomId = null;
             window.currentRoomIdForGame = null;
+            
+            // Oyun durumunu sıfırla
+            window.isGameFinished = false;
+            window.gameStatsSaved = false;
         });
 
         socket.on('error', (msg) => {

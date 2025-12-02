@@ -20,6 +20,10 @@ window.startGameMultiplayer = function (room, myUidParam) {
     window.isMultiplayer = true;
     window.myUid = myUidParam;
     window.currentRoomIdForGame = room.id;
+    
+    // Oyun durumunu sıfırla
+    window.isGameFinished = false;
+    window.gameStatsSaved = false;
 
     // Oyuncu listesini odadaki tüm oyunculardan oluştur
     // room.players objesi socketId -> player verisi şeklindedir
