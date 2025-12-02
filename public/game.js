@@ -104,6 +104,14 @@ window.loadMap = function (index) {
         if (window.showScorecard) {
             window.showScorecard(true); // true = oyun bitti
         }
+        
+        // Multiplayer'da sunucuya oyun bittiğini bildir
+        if (window.isMultiplayer && window.gameSocket && window.currentRoomIdForGame) {
+            window.gameSocket.emit('readyNextHole', {
+                roomId: window.currentRoomIdForGame,
+                isGameOver: true
+            });
+        }
         return;
     }
     window.currentMapIndex = index;

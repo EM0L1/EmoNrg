@@ -48,7 +48,7 @@ window.renderPlayerList = function () {
         
         li.innerHTML = `
             <strong>${player.name}</strong> ${player.isMe ? '(Sen)' : ''}<br>
-            <small>Skor: ${player.totalScore || 0} | Vuruş: ${player.totalStrokes || 0}</small>
+            <small>Skor: ${player.totalScore || 0}</small>
         `;
         
         uiElements.playerListEl.appendChild(li);
@@ -58,10 +58,10 @@ window.renderPlayerList = function () {
 // Update game UI
 window.updateGameUI = function () {
     if (window.currentMap) {
-        if (uiElements.mapInfoEl) uiElements.mapInfoEl.textContent = `Harita: ${window.currentMap.id}`;
-        if (uiElements.parInfoEl) uiElements.parInfoEl.textContent = `Par: ${window.currentMap.par}`;
+        if (uiElements.mapInfoEl) uiElements.mapInfoEl.textContent = `${window.currentMap.id}`;
+        if (uiElements.parInfoEl) uiElements.parInfoEl.textContent = `${window.currentMap.par}`;
     }
-    if (uiElements.strokeInfoEl) uiElements.strokeInfoEl.textContent = `Vuruş: ${window.currentStrokes || 0}`;
+    if (uiElements.strokeInfoEl) uiElements.strokeInfoEl.textContent = `${window.currentStrokes || 0}`;
 };
 
 // Update scorecard UI
@@ -70,22 +70,32 @@ window.updateScorecardUI = function () {
     
     uiElements.scorecardBody.innerHTML = '';
     
-    window.scoreHistory.forEach(entry => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${entry.mapId}</td>
-            <td>${entry.par}</td>
-            <td>${entry.strokes}</td>
-            <td>${entry.score}</td>
+    // Eğer multiplayer ise tüm oyuncuları göster
+    if (window.isMultiplayer && window.players && window.players.length > 1) {
+        // Skor tablosunu oyuncular için oluştur
+        uiElements.scorecardHead.innerHTML = `
+            <tr>
+                <th>Oyuncu</th>
+                <th>Toplam Vuruş</th>
+                <th>Toplam Puan</th>
+            </tr>
         `;
-        uiElements.scorecardBody.appendChild(tr);
-    });
-    
-    // Toplam skoru göster
-    const totalScore = window.scoreHistory.reduce((sum, e) => sum + e.score, 0);
-    const totalStrokes = window.scoreHistory.reduce((sum, e) => sum + e.strokes, 0);
-    
-    if (uiElements.scorecardHead) {
+        
+        // Oyuncuları puana göre sırala (en yüksek puan en üstte)
+        const sortedPlayers = [...window.players].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+        
+        sortedPlayers.forEach((player, index) => {
+            const tr = document.createElement('tr');
+            const rank = index === 0 ? '🏆 ' : `${index + 1}. `;
+            tr.innerHTML = `
+                <td>${rank}${player.name}${player.isMe ? ' (Sen)' : ''}</td>
+                <td>${player.totalStrokes || 0}</td>
+                <td>${player.totalScore || 0}</td>
+            `;
+            uiElements.scorecardBody.appendChild(tr);
+        });
+    } else {
+        // Tek oyunculu - eski skorcard
         uiElements.scorecardHead.innerHTML = `
             <tr>
                 <th>Harita</th>
@@ -94,6 +104,32 @@ window.updateScorecardUI = function () {
                 <th>Puan</th>
             </tr>
         `;
+        
+        window.scoreHistory.forEach(entry => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${entry.mapId}</td>
+                <td>${entry.par}</td>
+                <td>${entry.strokes}</td>
+                <td>${entry.score}</td>
+            `;
+            uiElements.scorecardBody.appendChild(tr);
+        });
+        
+        // Toplam satırı ekle
+        const totalScore = window.scoreHistory.reduce((sum, e) => sum + e.score, 0);
+        const totalStrokes = window.scoreHistory.reduce((sum, e) => sum + e.strokes, 0);
+        
+        const totalTr = document.createElement('tr');
+        totalTr.style.fontWeight = 'bold';
+        totalTr.style.borderTop = '2px solid #333';
+        totalTr.innerHTML = `
+            <td>TOPLAM</td>
+            <td>-</td>
+            <td>${totalStrokes}</td>
+            <td>${totalScore}</td>
+        `;
+        uiElements.scorecardBody.appendChild(totalTr);
     }
 };
 
@@ -120,6 +156,15 @@ window.showScorecard = function (isGameOver = false, roundInfo = null) {
         uiElements.roundResultPoints.textContent = `${roundInfo.points > 0 ? '+' : ''}${roundInfo.points} Puan`;
     } else {
         uiElements.roundResultArea.classList.add('hidden');
+    }
+    
+    // Buton metnini oyun durumuna göre ayarla
+    if (uiElements.btnCloseScorecard) {
+        if (isGameOver) {
+            uiElements.btnCloseScorecard.textContent = window.isMultiplayer ? 'Lobiye Dön' : 'Ana Menüye Dön';
+        } else {
+            uiElements.btnCloseScorecard.textContent = window.isMultiplayer ? 'Sonraki deliğe hazırım' : 'Sonraki Harita';
+        }
     }
 }
 

@@ -78,6 +78,15 @@ window.advanceHole = function (room) {
     console.log("advanceHole çağrıldı, yeni harita yüklenecek:", room.currentHole);
     syncPlayersFromRoom(room);
     
+    // Son haritaya ulaşıldı mı kontrol et
+    if (room.currentHole >= window.GAME_MAPS.length) {
+        console.log("Tüm haritalar tamamlandı! Oyun bitti.");
+        if (window.showScorecard) {
+            window.showScorecard(true); // Oyun bitti
+        }
+        return;
+    }
+    
     // Skor kartını kapat ve butonu resetle
     if (window.uiElements && window.uiElements.scorecardOverlay) {
         window.uiElements.scorecardOverlay.classList.add('hidden');
@@ -104,13 +113,18 @@ window.enableNextHoleButton = function (room) {
 
     // Eğer skor kartı henüz açılmadıysa şimdi aç
     if (window.uiElements && window.uiElements.scorecardOverlay && window.uiElements.scorecardOverlay.classList.contains('hidden')) {
+        // Son harita mı kontrol et
+        const isLastMap = (room.currentHole >= window.GAME_MAPS.length - 1);
         if (window.showScorecard) {
             window.showScorecard(false, null); // Oyun bitmedi, sadece delik tamamlandı
         }
     }
     if (window.uiElements && window.uiElements.btnCloseScorecard) {
         window.uiElements.btnCloseScorecard.disabled = false;
-        window.uiElements.btnCloseScorecard.textContent = 'Sonraki deliğe hazırım';
+        
+        // Son harita mı kontrol et
+        const isLastMap = (room.currentHole >= window.GAME_MAPS.length - 1);
+        window.uiElements.btnCloseScorecard.textContent = isLastMap ? 'Oyunu bitir' : 'Sonraki deliğe hazırım';
     }
 };
 
