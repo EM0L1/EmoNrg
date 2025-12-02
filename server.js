@@ -73,6 +73,7 @@ io.on('connection', (socket) => {
             id: roomId,
             host: socket.id,
             isPublic: isPublic,
+            status: 'waiting', // EKLENDİ: joinRandom için gerekli
             players: {
                 [socket.id]: {
                     uid: uid,

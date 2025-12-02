@@ -64,9 +64,11 @@ const GAME_MAPS = [
       { x: 250, y: 100, w: 20, h: 300 }, // Sol
       { x: 530, y: 100, w: 20, h: 100 }, // Sağ Üst
       { x: 530, y: 260, w: 20, h: 140 }, // Sağ Alt (Giriş 200-260 arası)
-      
+
       // Girişi koruyan engel
       { x: 600, y: 180, w: 20, h: 140 }
     ]
   }
 ];
+
+window.GAME_MAPS = GAME_MAPS;

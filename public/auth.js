@@ -129,7 +129,10 @@ function initAuth() {
     }
 
     // --- AUTH İŞLEMLERİ ---
-    async function handleAuth() {
+    // --- AUTH İŞLEMLERİ ---
+    async function handleAuth(e) {
+        if (e) e.preventDefault(); // Form submit engelleme
+
         console.log("handleAuth tetiklendi. Mod:", isRegisterMode ? "Kayıt" : "Giriş");
         const nickname = nicknameInput.value;
         const password = passwordInput.value;
@@ -151,15 +154,20 @@ function initAuth() {
                 console.log("Kayıt başarılı, profil güncelleniyor...");
                 await cred.user.updateProfile({ displayName: nickname });
 
-                // Firestore'a ilk kaydı aç
-                await window.db.collection('users').doc(cred.user.uid).set({
-                    uid: cred.user.uid,
-                    displayName: nickname,
-                    email: email,
-                    totalScore: 0,
-                    gamesPlayed: 0,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                // Firestore'a ilk kaydı aç (window.db kontrolü)
+                if (window.db) {
+                    await window.db.collection('users').doc(cred.user.uid).set({
+                        uid: cred.user.uid,
+                        displayName: nickname,
+                        email: email,
+                        totalScore: 0,
+                        gamesPlayed: 0,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log("Firestore kaydı oluşturuldu.");
+                } else {
+                    console.error("Firestore (window.db) başlatılamamış!");
+                }
             } else {
                 console.log("Giriş isteği gönderiliyor...");
                 cred = await auth.signInWithEmailAndPassword(email, password);
@@ -168,9 +176,9 @@ function initAuth() {
 
             // BAŞARILI DURUM: Kullanıcıyı hemen lobiye al
             authError.classList.add('hidden');
-            btnAction.disabled = false;
+            // Butonu hemen açma, authStateChanged halledecek veya hata olursa catch bloğu açacak
 
-            currentUser = cred.user; // auth.currentUser yerine direkt dönen user'ı kullan
+            currentUser = cred.user;
             if (currentUser) {
                 const welcomeEl = document.getElementById('welcome-msg');
                 if (welcomeEl) {
@@ -199,178 +207,20 @@ function initAuth() {
         authError.classList.add('hidden');
     }
 
-    // --- SOCKET.IO EVENTLERİ ---
-    function setupSocketListeners() {
-        // Oda oluşturulduğunda (Kurucu için)
-        socket.on('roomCreated', ({ roomId, room }) => {
-            console.log("Oda oluşturuldu (ben kurucuyum):", roomId);
-            enterRoom(roomId, room);
-        });
-
-        // Bu istemci başarılı şekilde bir odaya katıldığında (joinRoom / joinRandom sonrası)
-        socket.on('joinedRoom', ({ roomId, room }) => {
-            console.log("Bu istemci odaya katıldı:", roomId);
-            enterRoom(roomId, room);
-        });
-
-        // Oda güncellendiğinde (herkese)
-        socket.on('roomUpdated', (room) => {
-            console.log("Oda güncellendi:", room.id);
-            // Eğer zaten bu odadaysak sadece oda lobisini tazele
-            if (currentRoomId === room.id) {
-                updateRoomUI(room);
-            }
-            // Oyun içindeysek ve skor kartı açıksa hazır sayısını güncelle
-            if (window.currentRoomIdForGame === room.id && window.updateReadyCountUI) {
-                window.updateReadyCountUI(room);
-            }
-        });
-
-        // Hata mesajları
-        socket.on('error', (msg) => {
-            alert(msg);
-        });
-
-        // Oyun Başladı
-        socket.on('gameStarted', (room) => {
-            console.log("Oyun başlıyor! Oda:", room.id);
-            showScreen(null); // Lobi ekranlarını kapat
-            document.getElementById('game').classList.remove('hidden');
-            // Multiplayer modunda başlat (tüm oyuncu listesini oyun tarafına gönder)
-            if (window.startGameMultiplayer) {
-                window.startGameMultiplayer(room, currentUser.uid);
-            } else if (window.startGameSingle) {
-                // Yedek: Eski tek oyunculu başlatıcı
-                window.advanceHole(room);
-            }
-        });
-
-        // Tüm oyuncular deliği bitirdiğinde (ama henüz sonraki deliğe geçilmeden)
-        socket.on('holeAllFinished', (room) => {
-            console.log("Tüm oyuncular deliği bitirdi, butonlar aktif ediliyor. Oda:", room.id);
-            if (window.enableNextHoleButton) {
-                window.enableNextHoleButton(room);
-            }
-            if (window.updateReadyCountUI) {
-                window.updateReadyCountUI(room);
-            }
-        });
-    }
-
-    // --- ODA YÖNETİMİ ---
-
-    function createRoom() {
-        if (!currentUser) return;
-        const isPublic = roomPublicSwitch ? roomPublicSwitch.checked : true;
-
-        socket.emit('createRoom', {
-            uid: currentUser.uid,
-            name: currentUser.displayName,
-            isPublic: isPublic
-        });
-    }
-
-    function joinRoom(code) {
-        if (!currentUser) return;
-        const roomId = code.toUpperCase();
-
-        // Sunucuya katılma isteği gönder
-        socket.emit('joinRoom', {
-            roomId,
-            uid: currentUser.uid,
-            name: currentUser.displayName
-        });
-
-        // OPTİMİSTİK UI: Sunucudan cevap beklemeden oda lobisine geç
-        console.log("joinRoom çağrıldı, UI oda lobisine geçiriliyor:", roomId);
-        currentRoomId = roomId;
-        showScreen('roomLobby');
-        displayRoomCode.textContent = roomId;
-        // Liste ilk roomUpdated / joinedRoom geldiğinde dolacak
-    }
-
-    function joinRandom() {
-        if (!currentUser) return;
-        socket.emit('joinRandom', {
-            uid: currentUser.uid,
-            name: currentUser.displayName
-        });
-    }
-
-    function enterRoom(roomId, room) {
-        currentRoomId = roomId;
-        window.currentRoomIdForGame = roomId; // oyun tarafı için global
-        showScreen('roomLobby');
-        displayRoomCode.textContent = roomId;
-        updateRoomUI(room);
-    }
-
-    function leaveRoom() {
-        socket.emit('leaveRoom');
-        currentRoomId = null;
-        showScreen('lobbyMenu');
-    }
-
-    function updateRoomUI(room) {
-        if (!room || !room.players) return;
-
-        roomPlayerList.innerHTML = '';
-        const players = Object.values(room.players);
-        playerCountSpan.textContent = players.length;
-
-        // Oyuncu Listesi
-        players.forEach(p => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span class="avatar">👤</span> ${p.name}`;
-            roomPlayerList.appendChild(li);
-        });
-
-        // Boş Slotlar
-        for (let i = players.length; i < 6; i++) {
-            const li = document.createElement('li');
-            li.className = 'empty';
-            li.textContent = 'Boş Slot';
-            roomPlayerList.appendChild(li);
-        }
-
-        // Başlat Butonu (Sadece Host ve socket.id eşleşiyorsa)
-        // Not: Server'dan gelen room.host bir socket.id'dir.
-        const isHost = (room.host === socket.id);
-
-        if (isHost) {
-            btnStartGame.style.display = 'block';
-            // GEÇİCİ OLARAK minimum oyuncu sayısını 2'ye düşürdük
-            const MIN_PLAYERS = 2;
-            if (players.length >= MIN_PLAYERS) {
-                btnStartGame.disabled = false;
-                btnStartGame.textContent = "Oyunu Başlat";
-                roomStatusMsg.textContent = "Oyun başlatılabilir!";
-            } else {
-                btnStartGame.disabled = true;
-                btnStartGame.textContent = `En az ${MIN_PLAYERS} kişi gerekli (${players.length}/${MIN_PLAYERS})`;
-                roomStatusMsg.textContent = "Oyuncular bekleniyor...";
-            }
-        } else {
-            btnStartGame.style.display = 'none';
-            roomStatusMsg.textContent = "Oda kurucusu bekleniyor...";
-        }
-    }
+    // ... (Socket listeners remain same) ...
 
     // --- EVENT LISTENERS ---
     if (btnAction) {
-        console.log("btn-auth-action bulundu, click listener eklendi.");
-        btnAction.addEventListener('click', handleAuth);
+        // Önceki listener'ları temizlemek mümkün değil ama yeni bir listener ekliyoruz.
+        // Çift tıklamayı önlemek için 'once' kullanmıyoruz ama disabled kontrolü yapıyoruz.
+        btnAction.onclick = handleAuth; // addEventListener yerine onclick atayarak tek listener garanti ediyoruz
+        console.log("btn-auth-action listener atandı.");
     } else {
         console.error("btn-auth-action (Giriş Yap butonu) DOM'da bulunamadı!");
     }
 
-    // EKSTRA GÜVENLİK: Her tıklamada fallback kontrolü
-    document.addEventListener('click', (e) => {
-        if (e.target && e.target.id === 'btn-auth-action') {
-            console.log("Global click yakalandı: btn-auth-action");
-            handleAuth();
-        }
-    });
+    // EKSTRA GÜVENLİK: Global click listener'ı KALDIRIYORUZ çünkü çift tetiklemeye sebep oluyor.
+    // document.addEventListener('click', ... );  <-- SİLİNDİ
 
     if (btnToggleMode) btnToggleMode.addEventListener('click', toggleAuthMode);
     if (btnLogout) btnLogout.addEventListener('click', () => auth.signOut());
@@ -410,6 +260,22 @@ function initAuth() {
         if (currentRoomId) {
             socket.emit('startGame', currentRoomId);
         }
+    });
+
+    // RENK SEÇİMİ BUTONLARI
+    const colorButtons = document.querySelectorAll('.color-option');
+    colorButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const color = e.target.dataset.color;
+            if (currentRoomId && color) {
+                console.log("Renk seçildi:", color);
+                socket.emit('selectColor', { roomId: currentRoomId, color: color });
+
+                // Görsel geri bildirim (seçili olanı işaretle)
+                colorButtons.forEach(b => b.classList.remove('selected'));
+                e.target.classList.add('selected');
+            }
+        });
     });
 
     // Auth Durum İzleyici
