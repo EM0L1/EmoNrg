@@ -352,12 +352,12 @@ function initAuth() {
             updatePlayerList(players);
         });
 
-        socket.on('gameStarted', () => {
-            console.log("Oyun başladı!");
+        socket.on('gameStarted', (room) => {
+            console.log("Oyun başladı!", room);
             showScreen(null);
             document.getElementById('game').classList.remove('hidden');
-            if (window.startGameMulti) {
-                window.startGameMulti(currentRoomId);
+            if (window.startGameMultiplayer) {
+                window.startGameMultiplayer(room, currentUser ? currentUser.uid : null);
             }
         });
 
