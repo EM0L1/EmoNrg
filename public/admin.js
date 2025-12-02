@@ -130,6 +130,32 @@ let spectatorCanvas = null;
 let spectatorCtx = null;
 let spectatorData = { players: {}, currentHole: 0 };
 
+// Harita verileri (maps.js'den kopyalandı)
+const ADMIN_MAPS = [
+  { id: 1, par: 3, start: { x: 50, y: 50 }, hole: { x: 750, y: 50 }, walls: [
+      { x: 250, y: 0, w: 20, h: 350 }, { x: 530, y: 150, w: 20, h: 350 }
+  ]},
+  { id: 2, par: 4, start: { x: 50, y: 250 }, hole: { x: 750, y: 250 }, walls: [
+      { x: 200, y: 100, w: 30, h: 30 }, { x: 200, y: 370, w: 30, h: 30 },
+      { x: 350, y: 50, w: 30, h: 120 }, { x: 350, y: 330, w: 30, h: 120 },
+      { x: 500, y: 100, w: 30, h: 30 }, { x: 500, y: 370, w: 30, h: 30 },
+      { x: 350, y: 235, w: 30, h: 30 }
+  ]},
+  { id: 3, par: 3, start: { x: 80, y: 250 }, hole: { x: 720, y: 250 }, walls: [
+      { x: 200, y: 0, w: 400, h: 200 }, { x: 200, y: 300, w: 400, h: 200 },
+      { x: 380, y: 220, w: 40, h: 60 }
+  ]},
+  { id: 4, par: 5, start: { x: 50, y: 50 }, hole: { x: 750, y: 450 }, walls: [
+      { x: 150, y: 0, w: 20, h: 400 }, { x: 300, y: 100, w: 20, h: 400 },
+      { x: 450, y: 0, w: 20, h: 400 }, { x: 600, y: 100, w: 20, h: 400 }
+  ]},
+  { id: 5, par: 4, start: { x: 400, y: 450 }, hole: { x: 400, y: 250 }, walls: [
+      { x: 250, y: 100, w: 300, h: 20 }, { x: 250, y: 380, w: 300, h: 20 },
+      { x: 250, y: 100, w: 20, h: 300 }, { x: 530, y: 100, w: 20, h: 100 },
+      { x: 530, y: 260, w: 20, h: 140 }, { x: 600, y: 180, w: 20, h: 140 }
+  ]}
+];
+
 socket.on('spectateStarted', (room) => {
     console.log("İzleme başladı:", room);
     spectatorData = { 
@@ -168,7 +194,7 @@ function renderSpectatorView() {
     const w = spectatorCanvas.width;
     const h = spectatorCanvas.height;
     
-    // Arka plan
+    // Arka plan (yeşil çim)
     spectatorCtx.fillStyle = '#9ee6c9';
     spectatorCtx.fillRect(0, 0, w, h);
     
@@ -177,15 +203,40 @@ function renderSpectatorView() {
     spectatorCtx.lineWidth = 4;
     spectatorCtx.strokeRect(2, 2, w - 4, h - 4);
     
+    // Mevcut haritayı al
+    const currentMap = ADMIN_MAPS[spectatorData.currentHole] || null;
+    
+    // Duvarları çiz
+    if (currentMap && currentMap.walls) {
+        spectatorCtx.fillStyle = '#5d4037';
+        currentMap.walls.forEach(wall => {
+            spectatorCtx.fillRect(wall.x, wall.y, wall.w, wall.h);
+            // Gölge efekti
+            spectatorCtx.fillStyle = 'rgba(0,0,0,0.2)';
+            spectatorCtx.fillRect(wall.x + wall.w - 4, wall.y, 4, wall.h);
+            spectatorCtx.fillRect(wall.x, wall.y + wall.h - 4, wall.w, 4);
+            spectatorCtx.fillStyle = '#5d4037';
+        });
+    }
+    
+    // Deliği çiz
+    if (currentMap && currentMap.hole) {
+        spectatorCtx.beginPath();
+        spectatorCtx.fillStyle = '#111';
+        spectatorCtx.arc(currentMap.hole.x, currentMap.hole.y, 12, 0, Math.PI * 2);
+        spectatorCtx.fill();
+        spectatorCtx.closePath();
+    }
+    
     // Bilgi metni
     spectatorCtx.fillStyle = '#1e293b';
     spectatorCtx.font = 'bold 16px sans-serif';
-    spectatorCtx.fillText(`Harita: ${spectatorData.currentHole + 1} | Durum: ${spectatorData.status}`, 20, 30);
+    spectatorCtx.fillText(`Harita: ${spectatorData.currentHole + 1}/${ADMIN_MAPS.length} | Durum: ${spectatorData.status}`, 20, 30);
     
     // Oyuncuları çiz
     Object.entries(spectatorData.players).forEach(([socketId, player]) => {
-        const x = player.x || 400;
-        const y = player.y || 300;
+        const x = player.x || (currentMap ? currentMap.start.x : 400);
+        const y = player.y || (currentMap ? currentMap.start.y : 300);
         
         // Top rengi
         let color = '#ffffff';
@@ -202,8 +253,13 @@ function renderSpectatorView() {
         // Top
         spectatorCtx.beginPath();
         spectatorCtx.fillStyle = color;
+        spectatorCtx.shadowColor = 'rgba(0,0,0,0.2)';
+        spectatorCtx.shadowBlur = 4;
+        spectatorCtx.shadowOffsetY = 2;
         spectatorCtx.arc(x, y, 8, 0, Math.PI * 2);
         spectatorCtx.fill();
+        spectatorCtx.shadowColor = 'transparent';
+        spectatorCtx.closePath();
         
         // İsim
         spectatorCtx.fillStyle = '#1e293b';
@@ -211,8 +267,10 @@ function renderSpectatorView() {
         spectatorCtx.textAlign = 'center';
         spectatorCtx.fillText(player.name, x, y - 15);
         
-        // Skor
-        spectatorCtx.fillText(`Skor: ${player.score || 0}`, x, y + 25);
+        // Skor (altında)
+        spectatorCtx.font = '10px sans-serif';
+        spectatorCtx.fillStyle = '#475569';
+        spectatorCtx.fillText(`${player.score || 0} puan`, x, y + 25);
     });
     
     // Animasyon devam et

@@ -249,14 +249,14 @@ function checkGameLogic() {
             }
             // Multiplayer'da skor kartı sunucudan gelen holeAllFinished event'i ile açılacak
         } else {
-            // Tek oyunculu: skor kartını göster
+            // Tek oyunculu: skor kartını direkt göster
             if (window.uiElements && window.uiElements.statusEl) {
                 window.uiElements.statusEl.textContent = `${term}!`;
             }
-            // Tek oyunculu: küçük bir gecikmeyle skor kartını göster
+            // Tek oyunculu: skor kartını göster
             setTimeout(() => {
                 if (window.showScorecard) window.showScorecard(false, { term: term, points: points });
-            }, 300);
+            }, 500);
         }
 
         ball.vx = 0;
