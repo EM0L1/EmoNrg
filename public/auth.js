@@ -329,34 +329,15 @@ function initAuth() {
             roomPlayerList.appendChild(li);
         }
 
+        // Başlat butonunu sadece host için göster
         if (btnStartGame) {
-            btnStartGame.disabled = players.length < 1;
-        }
-    }
-
-                // Renk göstergesi
-                const colorDot = document.createElement('span');
-                colorDot.style.width = '12px';
-                colorDot.style.height = '12px';
-                colorDot.style.borderRadius = '50%';
-                colorDot.style.backgroundColor = player.color || 'gray';
-                colorDot.style.marginRight = '8px';
-
-                li.innerHTML = '';
-                li.appendChild(colorDot);
-                li.appendChild(document.createTextNode(`${player.name} ${player.uid === currentUser.uid ? '(Sen)' : ''}`));
+            const isHost = players.some(p => p && p.uid === currentUser.uid && p.isHost);
+            if (isHost) {
+                btnStartGame.style.display = 'block';
+                btnStartGame.disabled = players.length < 1;
             } else {
-                // Boş Slot
-                li.textContent = '?';
-                li.style.fontSize = '24px';
-                li.style.opacity = '0.5';
+                btnStartGame.style.display = 'none';
             }
-
-            roomPlayerList.appendChild(li);
-        }
-
-        if (btnStartGame) {
-            btnStartGame.disabled = players.length < 1;
         }
     }
 
