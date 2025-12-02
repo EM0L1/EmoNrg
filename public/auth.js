@@ -581,7 +581,14 @@ function initAuth() {
             console.log("Kullanıcı çıkış yaptı.");
             showScreen('auth');
         }
-    }); initAuth();
+    });
+
+}
+
+// DOM yüklendiginde başlat
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initAuth();
         // Sayfa yüklenince leaderboard'ı güncelle (socket bağlantısı için daha fazla bekle)
         setTimeout(() => {
             if (window.fetchLeaderboard && window.gameSocket && window.gameSocket.connected) {
@@ -597,12 +604,4 @@ function initAuth() {
             window.fetchLeaderboard();
         }
     }, 2000);
-} else {
-    initAuth();
-    // Sayfa yüklenince leaderboard'ı güncelle
-    setTimeout(() => {
-        if (window.fetchLeaderboard) {
-            window.fetchLeaderboard();
-        }
-    }, 1000);
 }
