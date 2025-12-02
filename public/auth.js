@@ -223,24 +223,35 @@ function initAuth() {
     function createRoom() {
         const isPublic = roomPublicSwitch.checked;
         console.log("Oda oluşturuluyor... Herkese açık:", isPublic);
-        if (socket) {
-            socket.emit('createRoom', { public: isPublic, creatorName: currentUser.displayName });
+        if (socket && currentUser) {
+            socket.emit('createRoom', {
+                uid: currentUser.uid,
+                name: currentUser.displayName,
+                isPublic: isPublic
+            });
         } else {
-            console.error("Socket bağlantısı yok!");
+            console.error("Socket bağlantısı yok veya kullanıcı oturumu kapalı!");
         }
     }
 
     function joinRoom(roomId) {
         console.log("Odaya katılınıyor:", roomId);
-        if (socket) {
-            socket.emit('joinRoom', { roomId: roomId, playerName: currentUser.displayName });
+        if (socket && currentUser) {
+            socket.emit('joinRoom', {
+                roomId: roomId,
+                uid: currentUser.uid,
+                name: currentUser.displayName
+            });
         }
     }
 
     function joinRandom() {
         console.log("Rastgele odaya katılınıyor...");
-        if (socket) {
-            socket.emit('joinRandom', { playerName: currentUser.displayName });
+        if (socket && currentUser) {
+            socket.emit('joinRandom', {
+                uid: currentUser.uid,
+                name: currentUser.displayName
+            });
         }
     }
 
@@ -258,17 +269,53 @@ function initAuth() {
         roomPlayerList.innerHTML = '';
         if (playerCountSpan) playerCountSpan.textContent = players.length;
 
-        players.forEach(p => {
+        // 6 Slotluk Sabit Tasarım
+        for (let i = 0; i < 6; i++) {
+            const player = players[i];
             const li = document.createElement('li');
-            li.className = 'player-item';
-            li.innerHTML = `
-                <span class="p-name">${p.name} ${p.id === socket.id ? '(Sen)' : ''}</span>
-            `;
+            li.className = 'player-slot';
+
+            // Stil tanımları
+            li.style.display = 'flex';
+            li.style.alignItems = 'center';
+            li.style.justifyContent = 'center';
+            li.style.background = '#f1f5f9';
+            li.style.border = '2px dashed #cbd5e1';
+            li.style.borderRadius = '8px';
+            li.style.height = '60px';
+            li.style.margin = '5px';
+            li.style.fontWeight = 'bold';
+            li.style.color = '#64748b';
+            li.style.position = 'relative';
+
+            if (player) {
+                // Dolu Slot
+                li.style.background = 'white';
+                li.style.border = '2px solid #3b82f6';
+                li.style.color = '#1e293b';
+
+                // Renk göstergesi
+                const colorDot = document.createElement('span');
+                colorDot.style.width = '12px';
+                colorDot.style.height = '12px';
+                colorDot.style.borderRadius = '50%';
+                colorDot.style.backgroundColor = player.color || 'gray';
+                colorDot.style.marginRight = '8px';
+
+                li.innerHTML = '';
+                li.appendChild(colorDot);
+                li.appendChild(document.createTextNode(`${player.name} ${player.uid === currentUser.uid ? '(Sen)' : ''}`));
+            } else {
+                // Boş Slot
+                li.textContent = '?';
+                li.style.fontSize = '24px';
+                li.style.opacity = '0.5';
+            }
+
             roomPlayerList.appendChild(li);
-        });
+        }
 
         if (btnStartGame) {
-            // Tek başına test etmek için 1 kişi yeterli olsun
             btnStartGame.disabled = players.length < 1;
         }
     }
@@ -282,7 +329,6 @@ function initAuth() {
             if (displayRoomCode) displayRoomCode.textContent = data.roomId;
             showScreen('roomLobby');
 
-            // Oyuncu listesini güncelle
             if (data.room && data.room.players) {
                 updatePlayerList(Object.values(data.room.players));
             }
