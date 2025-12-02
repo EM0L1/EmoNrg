@@ -16,33 +16,6 @@
 			<h1 id="auth-title">Giriş Yap</h1>
 			<p>Devam etmek için giriş yapın.</p>
 
-			<div id="auth-form">
-				<input id="auth-nickname" type="text" placeholder="Kullanıcı Adı (Nickname)" maxlength="20" />
-				<input id="auth-password" type="password" placeholder="Şifre" style="margin-top:10px;" />
-
-				<p id="auth-error" class="error hidden"></p>
-
-				<button id="btn-auth-action" class="btn primary large">Giriş Yap</button>
-
-			<div style="margin: 20px 0; text-align: left;">
-				<label class="switch-container">
-					<span>Herkese Açık (Rastgele eşleşme)</span>
-					<input id="room-public-switch" type="checkbox" checked>
-					<span class="checkmark"></span>
-				</label>
-			</div>
-
-			<div class="row">
-				<button id="btn-create-confirm" class="btn primary">Oluştur</button>
-				<button id="btn-create-cancel" class="btn">İptal</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- 4. ODAYA KATIL MODALI -->
-	<div id="join-room-modal" class="overlay hidden" style="background: rgba(0,0,0,0.8);">
-		<div class="card">
-			<h2>Oda Kodu Girin</h2>
 			<input id="room-code-input" type="text" placeholder="6 Haneli Kod" maxlength="6"
 				style="text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 24px;" />
 			<p id="join-error" class="error hidden"></p>
