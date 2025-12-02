@@ -252,14 +252,18 @@ io.on('connection', (socket) => {
         // Eğer bir oyuncu oyun bitti diyorsa, oda için de bitmiş sayabiliriz (basitlik için)
         if (isGameOver) room.isGameOver = true;
 
-        const allReady = Object.values(room.players).every(
-            p => p.finishedCurrentHole && p.readyForNextHole
-        );
+        // Oyun bittiyse sadece readyForNextHole kontrolü yap
+        // Normal delik tamamlamada hem finishedCurrentHole hem readyForNextHole kontrol et
+        const allReady = room.isGameOver 
+            ? Object.values(room.players).every(p => p.readyForNextHole)
+            : Object.values(room.players).every(p => p.finishedCurrentHole && p.readyForNextHole);
         
         // Hazır olan oyuncu sayısını herkese bildir
         const readyCount = Object.values(room.players).filter(p => p.readyForNextHole).length;
         const totalCount = Object.values(room.players).length;
         io.to(roomId).emit('readyCountUpdate', { ready: readyCount, total: totalCount });
+        
+        console.log(`[READY CHECK] Oda: ${roomId}, Hazır: ${readyCount}/${totalCount}, GameOver: ${room.isGameOver}, AllReady: ${allReady}`);
 
         if (allReady) {
             if (room.isGameOver) {
