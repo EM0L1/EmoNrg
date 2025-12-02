@@ -1,3 +1,20 @@
+const express = require('express');
+const http = require('http');
+const { Server } = require("socket.io");
+const admin = require('firebase-admin');
+
+// Firebase Admin SDK Başlatma
+const serviceAccount = require('./serviceAccountKey.json');
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+
+const app = express();
+app.use(express.static('public'));
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {

@@ -427,9 +427,11 @@ function initAuth() {
     });
 
 
-    // DOM yüklendiğinde başlat
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initAuth);
-    } else {
-        initAuth();
-    }
+}
+
+// DOM yüklendiğinde başlat
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuth);
+} else {
+    initAuth();
+}
