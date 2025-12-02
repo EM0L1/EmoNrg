@@ -168,6 +168,7 @@ function initAuth() {
                         uid: cred.user.uid,
                         displayName: nickname,
                         email: email,
+                        role: 'player', // Varsayılan rol
                         totalScore: 0,
                         gamesPlayed: 0,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
