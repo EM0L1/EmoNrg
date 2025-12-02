@@ -82,7 +82,8 @@ io.on('connection', (socket) => {
                     ready: true,
                     x: 0,
                     y: 0,
-                    color: 'white'
+                    color: 'white',
+                    isHost: true
                 }
             }
         };
@@ -119,7 +120,8 @@ io.on('connection', (socket) => {
             ready: false,
             x: 0,
             y: 0,
-            color: assignedColor
+            color: assignedColor,
+            isHost: false
         };
 
         socket.join(roomId);
@@ -147,7 +149,7 @@ io.on('connection', (socket) => {
             const allColors = ['red', 'blue', 'purple', 'green', 'yellow', 'white', 'pink', 'turquoise'];
             const assignedColor = allColors.find(c => !takenColors.has(c)) || 'white';
 
-            room.players[socket.id] = { uid, name, score: 0, ready: false, x: 0, y: 0, color: assignedColor };
+            room.players[socket.id] = { uid, name, score: 0, ready: false, x: 0, y: 0, color: assignedColor, isHost: false };
             socket.join(availableRoomId);
             io.to(availableRoomId).emit('roomUpdated', room);         // herkese güncelle
             socket.emit('joinedRoom', { roomId: availableRoomId, room }); // sadece bu istemciye özel bilgi
@@ -430,6 +432,9 @@ io.on('connection', (socket) => {
                 if (wasHost) {
                     const nextHostId = Object.keys(room.players)[0];
                     room.host = nextHostId;
+                    // Eski host'tan isHost'u kaldır, yeni host'a ekle
+                    Object.values(room.players).forEach(p => p.isHost = false);
+                    room.players[nextHostId].isHost = true;
                     // Yeni hostun ismini bulalım
                     const newHostName = room.players[nextHostId].name;
                     console.log(`[YENİ HOST] Oda: ${roomId}, Yeni Host: ${newHostName}`);

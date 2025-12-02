@@ -304,6 +304,42 @@ function initAuth() {
 
                 li.innerHTML = '';
                 li.appendChild(colorDot);
+                
+                // Host ise taç ekle
+                if (player.isHost) {
+                    const crown = document.createElement('span');
+                    crown.textContent = '👑';
+                    crown.style.marginRight = '4px';
+                    li.appendChild(crown);
+                }
+                
+                const nameText = document.createTextNode(`${player.name} ${player.uid === currentUser.uid ? '(Sen)' : ''}`);
+                li.appendChild(nameText);
+            } else {
+                // Boş Slot
+                li.textContent = '?';
+                li.style.fontSize = '24px';
+                li.style.opacity = '0.5';
+            }
+
+            roomPlayerList.appendChild(li);
+        }
+
+        if (btnStartGame) {
+            btnStartGame.disabled = players.length < 1;
+        }
+    }
+
+                // Renk göstergesi
+                const colorDot = document.createElement('span');
+                colorDot.style.width = '12px';
+                colorDot.style.height = '12px';
+                colorDot.style.borderRadius = '50%';
+                colorDot.style.backgroundColor = player.color || 'gray';
+                colorDot.style.marginRight = '8px';
+
+                li.innerHTML = '';
+                li.appendChild(colorDot);
                 li.appendChild(document.createTextNode(`${player.name} ${player.uid === currentUser.uid ? '(Sen)' : ''}`));
             } else {
                 // Boş Slot

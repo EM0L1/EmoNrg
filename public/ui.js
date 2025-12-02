@@ -81,8 +81,18 @@ uiElements.btnCloseScorecard.addEventListener('click', () => {
     }
     // Tek oyunculu: doğrudan sonraki haritaya geç
     uiElements.scorecardOverlay.classList.add('hidden');
-    if (window.loadMap) {
-        window.loadMap(window.currentMapIndex + 1);
+    
+    // Oyun bitti mi kontrol et
+    if (window.isGameFinished) {
+        // Oyun bitti, lobiye dön
+        if (uiElements.gameMain) uiElements.gameMain.classList.add('hidden');
+        if (uiElements.lobbyMenu) uiElements.lobbyMenu.classList.remove('hidden');
+    } else {
+        // Sonraki haritaya geç
+        if (window.loadMap && typeof window.currentMapIndex !== 'undefined') {
+            console.log("Sonraki haritaya geçiliyor:", window.currentMapIndex + 1);
+            window.loadMap(window.currentMapIndex + 1);
+        }
     }
 });
 
